@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OcuGuard AI Enterprise - Antigravity Agent Mesh</title>
+  <style>
+    :root {
+      --bg-dark: #050811;
+      --card-bg: #0d1322;
+      --border-color: rgba(255, 255, 255, 0.07);
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --color-brand: #3b82f6;
+      --color-success: #10b981;
+      --color-danger: #ef4444;
+      --color-warn: #f59e0b;
+      --color-purple: #a78bfa;
+      --color-cyan: #06b6d4;
+    }
+
+    body {
+      margin: 0; background-color: var(--bg-dark); color: var(--text-main);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app-wrapper { max-width: 1650px; margin: 0 auto; padding: 24px; box-sizing: border-box; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--border-color); padding-bottom: 16px; }
+    h1 { font-size: 1.6rem; font-weight: 800; margin: 0; background: linear-gradient(to right, #38bdf8, #818cf8); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .subtitle { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }
+    
+    .layout-grid { display: grid; grid-template-columns: 410px 1fr 390px; gap: 20px; }
+    @media (max-width: 1400px) { .layout-grid { grid-template-columns: 1fr; } }
+
+    .card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.6); position: relative; overflow: hidden; }
+    .card h2 { font-size: 0.90rem; font-weight: 700; margin-top: 0; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
+    
+    .control-block { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+    .label-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
+    .value-tag { font-variant-numeric: tabular-nums; font-weight: bold; color: #38bdf8; font-size: 0.9rem; }
+    
+    select, input[type="text"], textarea { width: 100%; background: #030712; border: 1px solid #27272a; color: #fff; padding: 10px; border-radius: 8px; font-size: 0.9rem; box-sizing: border-box; transition: border-color 0.2s; }
+    select:focus, input[type="text"]:focus, textarea:focus { outline: none; border-color: #38bdf8; }
+    input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; background: #27272a; height: 6px; border-radius: 999px; outline: none; }
+    input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--color-brand); cursor: pointer; }
+
+    .btn-group { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 14px; }
+    .btn-macro { background: rgba(255,255,255,0.03); border: 1px solid #27272a; color: #d1d5db; padding: 8px; border-radius: 6px; font-size: 0.75rem; cursor: pointer; text-align: center; transition: all 0.2s; }
+    .btn-macro:hover { background: rgba(255,255,255,0.08); border-color: #4b5563; }
+    .btn-evaluate { background: linear-gradient(90deg, #38bdf8, #818cf8); border: none; color: #fff; padding: 12px 16px; border-radius: 10px; font-size: 0.95rem; cursor: pointer; width: 100%; margin-top: 4px; font-weight: 700; box-shadow: 0 4px 12px rgba(56, 189, 248, 0.2); }
+    .btn-evaluate:hover { opacity: 0.95; }
+    .info-note { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; line-height: 1.3; }
+
+    .badge-status { font-size: 0.85rem; font-weight: 700; text-transform: uppercase; padding: 6px 14px; border-radius: 999px; letter-spacing: 0.05em; display: inline-block; text-align: center; }
+    .state-safe { background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .state-violation { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .state-critical-alert { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); box-shadow: 0 0 12px rgba(239, 68, 68, 0.1); }
+    .state-elevated-alert { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+    .state-standard-log { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); }
+    .state-escalation { background: rgba(236, 72, 153, 0.15); color: #f472b6; border: 1px solid rgba(236, 72, 153, 0.4); }
+    .state-adaptive-guidance { background: rgba(167, 139, 250, 0.15); color: #c084fc; border: 1px solid rgba(167, 139, 250, 0.4); }
+    
+    .viewports-stack { display: flex; flex-direction: column; gap: 20px; }
+    .viewport-box { background: #02040a; border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; position: relative; box-shadow: inset 0 4px 20px rgba(0,0,0,0.8); }
+    .viewport-label { position: absolute; top: 12px; left: 12px; background: rgba(3, 7, 18, 0.8); padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; font-family: monospace; color: var(--text-muted); z-index: 10; border: 1px solid var(--border-color); }
+    .viewport-oem-tag { position: absolute; top: 12px; right: 12px; font-size: 0.75rem; font-weight: 800; font-family: monospace; color: var(--color-brand); background: rgba(59, 130, 246, 0.1); padding: 4px 10px; border-radius: 4px; z-index: 10; border: 1px solid rgba(59, 130, 246, 0.2); text-transform: uppercase; letter-spacing: 0.05em; }
+    canvas { display: block; width: 100%; height: auto; }
+
+    .directive-card { background: linear-gradient(135deg, #0f1123 0%, #050811 100%); border: 1px solid rgba(99, 102, 241, 0.25); }
+    .prompt-box { font-size: 1.05rem; font-weight: 600; line-height: 1.4; min-height: 54px; color: #fff; }
+
+    .pan-track { position: relative; height: 16px; background: #030712; border-radius: 4px; border: 1px solid var(--border-color); margin: 6px 0; }
+    .pan-center-line { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: rgba(255, 255, 255, 0.15); }
+    .pan-marker { position: absolute; top: 2px; bottom: 2px; width: 6px; background: #3b82f6; border-radius: 2px; transform: translateX(-50%); transition: left 0.1s ease-out; }
+
+    .legend-box { display: flex; gap: 10px; flex-wrap: wrap; padding: 12px 16px; color: #cbd5e1; font-size: 0.8rem; background: rgba(3, 7, 18, 0.6); border-top: 1px solid var(--border-color); }
+    .legend-item { display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px; border-radius: 6px; background: rgba(255,255,255,0.01); border: 1px solid rgba(226,232,240,0.03); }
+    .legend-pill { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .legend-safe .legend-pill { background: #10b981; box-shadow: 0 0 8px #10b981; }
+    .legend-warn .legend-pill { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
+    .legend-danger .legend-pill { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
+
+    pre { background: #030712; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 0.75rem; overflow-x: auto; color: #34d399; border: 1px solid rgba(16, 185, 129, 0.1); max-height: 250px; margin: 0; font-variant-numeric: tabular-nums; }
+    
+    .bme-overlay { position: absolute; inset: 0; background: rgba(236, 72, 153, 0.03); display: none; pointer-events: none; border: 2px solid rgba(236, 72, 153, 0.5); border-radius: 10px; box-sizing: border-box; z-index: 5; }
+    .bme-banner { position: absolute; bottom: 12px; right: 12px; background: rgba(236, 72, 153, 0.9); color: #fff; font-size: 0.72rem; font-weight: bold; padding: 4px 10px; border-radius: 4px; display: none; font-family: monospace; z-index: 10; letter-spacing: 0.05em; }
+    
+    .agent-specific-panel { background: rgba(3, 7, 18, 0.4); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 14px; display: none; }
+    .panel-title { font-size: 0.78rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+
+    footer { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-color); font-size: 0.75rem; color: var(--text-muted); text-align: center; line-height: 1.5; }
+  </style>
+</head>
+<body>
+
+  <div class="app-wrapper">
+    <header>
+      <div>
+        <h1>OcuGuard AI Enterprise</h1>
+        <div class="subtitle">Antigravity Autonomous Multi-Agent Spatial Orchestration Node</div>
+      </div>
+      <div>
+        <span class="badge-status" style="background: rgba(59, 130, 246, 0.08); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.2);">● Antigravity Orchestrator Core Running</span>
+      </div>
+    </header>
+
+    <div class="layout-grid">
+      
+      <div class="card">
+        <h2>Orchestrator Mesh Config</h2>
+        
+        <div class="control-block">
+          <label>Target Mesh Sub-Agent Plugin</label>
+          <select id="agent_selector">
+            <option value="EYE_SENTINEL">Eye-Sentinel (Adaptive Orientation)</option>
+            <option value="OCUGUARD_CORE">OcuGuard Core (Kinematics Parameter Guard)</option>
+            <option value="GAZE_COMPASS">Gaze-Compass (PRL Visual Space Alignment)</option>
+            <option value="TABULAR_LAYOUT_SPEECH">Tabular Layout Speech (OCR Optimization)</option>
+            <option value="ERGONOMIC_SCHEDULE">Ergonomic Schedule (Habit Monitoring)</option>
+            <option value="AMBIENT_LUMINANCE">Ambient Luminance (Contrast Assist)</option>
+            <option value="BE_MY_EYES">Be My Eyes (Acoustic Escalation Proxy)</option>
+          </select>
+        </div>
+
+        <div class="control-block">
+          <label>Execution Deployment Mode</label>
+          <select id="execution_mode">
+            <option value="SIMULATION">Simulation Path (Mock Workspace Stream)</option>
+            <option value="PRODUCTION">Production Integration (Live Backend Stream)</option>
+          </select>
+        </div>
+
+        <div class="control-block">
+          <label>Optics Hardware OEM Base</label>
+          <select id="oem_selector">
+            <option value="Meta">Meta Orion Smart Framework</option>
+            <option value="Apple">Apple Spatial Glass Module</option>
+            <option value="Google">Google Ambient Glass Engine</option>
+            <option value="Samsung">Samsung XR Hardware Cluster</option>
+            <option value="OpenXR">Generic OpenXR Middleware Pipe</option>
+          </select>
+        </div>
+
+        <div class="control-block">
+          <label>Backend Core Pipeline Endpoint</label>
+          <input id="backend_url" type="text" value="/v1/stream/evaluate" />
+        </div>
+
+        <div class="control-block">
+          <div class="label-row"><span>Internal Model Confidence</span><span id="lbl_conf" class="value-tag">95%</span></div>
+          <input id="param_conf" type="range" min="50" max="100" value="95" />
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 14px 0;">
+
+        <div class="control-block">
+          <div class="label-row"><span>Head Rotation Pitch (X-Axis)</span><span id="lbl_pitch" class="value-tag">0°</span></div>
+          <input id="param_pitch" type="range" min="-90" max="90" value="0" />
+        </div>
+        
+        <div class="control-block">
+          <div class="label-row"><span>Head Rotation Yaw (Y-Axis)</span><span id="lbl_yaw" class="value-tag">0°</span></div>
+          <input id="param_yaw" type="range" min="-90" max="90" value="0" />
+        </div>
+
+        <div class="control-block">
+          <label>Acoustic Transcript (Microphone Input)</label>
+          <textarea id="param_transcript" rows="2" placeholder="Captured voice annotations stream here..."></textarea>
+        </div>
+
+        <div id="panel_gaze_compass" class="agent-specific-panel">
+          <div class="panel-title">Gaze Compass Proximity Parameters</div>
+          <div class="control-block">
+            <div class="label-row"><span>Spatial Distance Limit</span><span id="lbl_obstacle_dist" class="value-tag">40%</span></div>
+            <input id="param_obstacle_dist" type="range" min="5" max="100" value="40" />
+          </div>
+          <div class="control-block" style="margin-bottom: 0;">
+            <div class="label-row"><span>Obstacle Bearing Angle</span><span id="lbl_obstacle_bearing" class="value-tag">20°</span></div>
+            <input id="param_obstacle_bearing" type="range" min="-90" max="90" value="20" />
+          </div>
+        </div>
+
+        <div id="panel_tabular_speech" class="agent-specific-panel">
+          <div class="panel-title">Tabular OCR Document Intent</div>
+          <select id="param_help_request">
+            <option value="Need help reading blurred text grid">Read unstructured document layout</option>
+            <option value="Locate the structural data matrix layout">Locate layout boundaries</option>
+            <option value="Describe the table rows and column parameters in this sheet">Parse tabular spreadsheet grids</option>
+          </select>
+        </div>
+
+        <div id="panel_ergonomic_schedule" class="agent-specific-panel">
+          <div class="panel-title">Ergonomic Duration Tracking</div>
+          <div class="control-block" style="margin-bottom: 0;">
+            <div class="label-row"><span>Sustained Position Duration</span><span id="lbl_hold_duration" class="value-tag">0s</span></div>
+            <input id="param_hold_duration" type="range" min="0" max="4000" value="0" />
+          </div>
+        </div>
+
+        <div id="panel_ambient_luminance" class="agent-specific-panel">
+          <div class="panel-title">Luminance Environmental Telemetry</div>
+          <div class="control-block">
+            <div class="label-row"><span>Ambient Intensity Metric</span><span id="lbl_ambient_light" class="value-tag">55%</span></div>
+            <input id="param_ambient_light" type="range" min="0" max="100" value="55" />
+          </div>
+          <div class="control-block" style="margin-bottom: 0;">
+            <label>Contrast Profile Adaptation</label>
+            <select id="param_contrast_mode">
+              <option value="standard">Standard Baseline Balance</option>
+              <option value="high_contrast">High Glare Filter Profile</option>
+              <option value="low_contrast">Low Illumination Boost Profile</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button class="btn-macro" onclick="triggerMacro('orientation_alert')">Post-Op Hold Drift</button>
+          <button class="btn-macro" onclick="triggerMacro('layout_ocr')">Tabular Matrix Analysis</button>
+          <button class="btn-macro" onclick="triggerMacro('gaze_scotoma')">Gaze Obstacle Matrix</button>
+          <button class="btn-macro" onclick="triggerMacro('ergonomic_violation')">Ergonomic Hold Alert</button>
+          <button class="btn-macro" onclick="triggerMacro('luminance_glare')">High Glare Exposure</button>
+          <button class="btn-macro" onclick="triggerMacro('bme_escalation')">Proxy Audio Trigger</button>
+          <button class="btn-macro" style="grid-column: span 2; color: #ef4444;" onclick="triggerMacro('reset')">Clear Simulation Baselines</button>
+        </div>
+
+        <button class="btn-evaluate" onclick="processAgentOrchestrator()">Dispatch Telemetry Payload</button>
+      </div>
+
+      <div class="viewports-stack">
+        <div class="viewport-box">
+          <div class="viewport-label">V_01 // SYSTEMIC HEAD-PITCH ORIENTATION METRIC</div>
+          <div class="viewport-oem-tag" id="oem_hud_tag">META</div>
+          <canvas id="canvas3d" width="600" height="250"></canvas>
+        </div>
+        <div class="viewport-box" id="matrix2dContainer">
+          <div class="viewport-label">V_02 // INTERACTIVE RETINAL ORIENTATION MATRIX SPACE</div>
+          <div class="bme-overlay" id="bmeOverlay"></div>
+          <div class="bme-banner" id="bmeBanner">LIVE ESCALATION GATEWAY VOICE STREAM ACTIVE</div>
+          <canvas id="canvas2d" width="600" height="250"></canvas>
+          <div class="legend-box" id="gaze_legend" style="display: none;">
+            <div class="legend-item legend-safe"><span class="legend-pill"></span>Stable Target Field</div>
+            <div class="legend-item legend-warn"><span class="legend-pill"></span>Approaching Perimeter Block</div>
+            <div class="legend-item legend-danger"><span class="legend-pill"></span>Target Is Obscured</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar" style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="card directive-card">
+          <h2>Active Node Instructions Dispatch</h2>
+          <div class="prompt-box" id="out_prompt">Awaiting streaming metadata payload...</div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08);">
+            <span id="out_state" class="badge-status state-safe">SAFE</span>
+            <span id="out_agent" style="font-size: 0.75rem; font-family: monospace; color: var(--text-muted);">UNBOUNDED_NODE</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Acoustic Pan Alignment Shift</h2>
+          <div class="pan-track">
+            <div class="pan-center-line"></div>
+            <div class="pan-marker" id="out_pan" style="left: 50%;"></div>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); font-family: monospace;">
+            <span>LEFT_CHANNEL</span>
+            <span id="lbl_pan" style="color: #06b6d4; font-weight: 700;">0.00</span>
+            <span>RIGHT_CHANNEL</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Response Stream Serialization Object</h2>
+          <pre id="out_json">{}</pre>
+        </div>
+      </div>
+
+    </div>
+    
+    <footer>
+      ⚖️ <strong>Regulatory Notice & Product Specification Boundaries:</strong> OcuGuard AI operates strictly as an abstract cognitive assistive framework and non-diagnostic orientation aid. It processes structural telemetry mappings and layout metrics under stateless HIPAA/GDPR paradigms. This software does not track, diagnose, treat, or prevent any active clinical illness, and it does not replace professional medical advice or certified rehabilitation routines.
+    </footer>
+  </div>
+
+  <script>
+    const telemetry = {
+      pitch: 0, yaw: 0, roll: -3, confidence: 95,
+      agentMode: "EYE_SENTINEL", transcript: "",
+      blind_x: 0.0, blind_y: 0.1, blind_r: 0.25,
+      gaze_x: -0.2, gaze_y: -0.1, target_x: 0.3, target_y: 0.2,
+      obstacle_distance: 0.4, obstacle_bearing: 20,
+      help_request: "Need help reading blurred text grid",
+      hold_duration: 0, ambient_light: 55, contrast_mode: "standard"
+    };
+
+    let activeDragTarget = null;
+    let lastSpokenAlertText = "";
+    let speechThrottleToken = null;
+
+    const canvas3d = document.getElementById('canvas3d'); const ctx3d = canvas3d.getContext('2d');
+    const canvas2d = document.getElementById('canvas2d'); const ctx2d = canvas2d.getContext('2d');
+
+    const outPrompt = document.getElementById('out_prompt'); const outState = document.getElementById('out_state');
+    const outAgent = document.getElementById('out_agent'); const outPan = document.getElementById('out_pan');
+    const lblPan = document.getElementById('lbl_pan'); const outJson = document.getElementById('out_json');
+    const bmeOverlay = document.getElementById('bmeOverlay'); const bmeBanner = document.getElementById('bmeBanner');
+    const executionModeSelect = document.getElementById('execution_mode');
+    const backendUrlInput = document.getElementById('backend_url');
+    const oemSelector = document.getElementById('oem_selector');
+    const oemHudTag = document.getElementById('oem_hud_tag');
+    const gazeLegend = document.getElementById('gaze_legend');
+
+    function rad(deg) { return deg * (Math.PI / 180); }
+
+    function syncPanelVisibilities() {
+      // Manage layout dashboard configurations dynamically
+      document.getElementById('panel_gaze_compass').style.display = (telemetry.agentMode === 'GAZE_COMPASS') ? 'block' : 'none';
+      gazeLegend.style.display = (telemetry.agentMode === 'GAZE_COMPASS') ? 'flex' : 'none';
+      document.getElementById('panel_tabular_speech').style.display = (telemetry.agentMode === 'TABULAR_LAYOUT_SPEECH') ? 'block' : 'none';
+      document.getElementById('panel_ergonomic_schedule').style.display = (telemetry.agentMode === 'ERGONOMIC_SCHEDULE') ? 'block' : 'none';
+      document.getElementById('panel_ambient_luminance').style.display = (telemetry.agentMode === 'AMBIENT_LUMINANCE') ? 'block' : 'none';
+    }
+
+    function triggerVoiceAlertSynthesis(sentence) {
+      if (!window.speechSynthesis || sentence === lastSpokenAlertText) return;
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(sentence);
+      utterance.rate = 1.12;
+      lastSpokenAlertText = sentence;
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function triggerMacro(profile) {
+      if (profile === 'orientation_alert') {
+        document.getElementById('agent_selector').value = "EYE_SENTINEL";
+        telemetry.pitch = -12;
+        document.getElementById('param_transcript').value = "My head posture alignment is fatiguing.";
+      } else if (profile === 'layout_ocr') {
+        document.getElementById('agent_selector').value = "TABULAR_LAYOUT_SPEECH";
+        telemetry.pitch = 0;
+        document.getElementById('param_help_request').value = "Describe the table rows and column parameters in this sheet";
+        document.getElementById('param_transcript').value = "Process this blurry work document layout matrix framework.";
+      } else if (profile === 'gaze_scotoma') {
+        document.getElementById('agent_selector').value = "GAZE_COMPASS";
+        telemetry.target_x = 0.02; telemetry.target_y = 0.08;
+        telemetry.blind_x = 0.0; telemetry.blind_y = 0.1;
+        document.getElementById('param_transcript').value = "Target focus point shifts inside tracking blind coordinates.";
+      } else if (profile === 'ergonomic_violation') {
+        document.getElementById('agent_selector').value = "ERGONOMIC_SCHEDULE";
+        telemetry.pitch = -42;
+        telemetry.hold_duration = 2400;
+        document.getElementById('param_hold_duration').value = 2400;
+        document.getElementById('lbl_hold_duration').textContent = "2400s";
+        document.getElementById('param_transcript').value = "I have been editing layout designs with head tracking down for a sustained period.";
+      } else if (profile === 'luminance_glare') {
+        document.getElementById('agent_selector').value = "AMBIENT_LUMINANCE";
+        telemetry.ambient_light = 88;
+        document.getElementById('param_ambient_light').value = 88;
+        document.getElementById('lbl_ambient_light').textContent = "88%";
+        document.getElementById('param_contrast_mode').value = "high_contrast";
+        document.getElementById('param_transcript').value = "Intense workplace contrast overlay detected on my lens visor.";
+      } else if (profile === 'bme_escalation') {
+        document.getElementById('agent_selector').value = "BE_MY_EYES";
+        document.getElementById('param_conf').value = telemetry.confidence = 70;
+        document.getElementById('param_transcript').value = "The geometric system output data looks distorted, please open live audio helper links.";
+      } else if (profile === 'reset') {
+        document.getElementById('param_transcript').value = "";
+        document.getElementById('param_conf').value = telemetry.confidence = 95;
+        telemetry.pitch = 0; telemetry.yaw = 0;
+        telemetry.hold_duration = 0; telemetry.ambient_light = 55;
+        telemetry.target_x = 0.3; telemetry.target_y = 0.2;
+        telemetry.blind_x = 0.0; telemetry.blind_y = 0.1;
+        document.getElementById('param_pitch').value = 0; document.getElementById('param_yaw').value = 0;
+        document.getElementById('param_hold_duration').value = 0; document.getElementById('lbl_hold_duration').textContent = "0s";
+        document.getElementById('param_ambient_light').value = 55; document.getElementById('lbl_ambient_light').textContent = "55%";
+        document.getElementById('param_contrast_mode').value = "standard";
+      }
+
+      telemetry.agentMode = document.getElementById('agent_selector').value;
+      telemetry.help_request = document.getElementById('param_help_request').value;
+      telemetry.contrast_mode = document.getElementById('param_contrast_mode').value;
+      document.getElementById('lbl_conf').textContent = `${telemetry.confidence}%`;
+      document.getElementById('lbl_pitch').textContent = `${telemetry.pitch}°`;
+      document.getElementById('lbl_yaw').textContent = `${telemetry.yaw}°`;
+      
+      syncPanelVisibilities();
+      processAgentOrchestrator();
+    }
+
+    async function processAgentOrchestrator() {
+      telemetry.transcript = document.getElementById('param_transcript').value;
+      let status = "STANDARD_LOG";
+      let prompt = "All orientation track vectors mapping successfully against user metrics bounds.";
+      let targetPanValue = telemetry.yaw / 90;
+
+      bmeOverlay.style.display = "none"; bmeBanner.style.display = "none";
+      oemHudTag.textContent = oemSelector.value;
+
+      if (executionModeSelect.value === 'PRODUCTION') {
+        outPrompt.textContent = 'Serializing structured telemetry framework down to backend middleware...';
+        
+        // Match payload schema mapping expected structure in schemas.py
+        const requestPayload = {
+          user_id: "demo_anonymized_wearer_uuid",
+          input_string: telemetry.transcript,
+          agent_mode: telemetry.agentMode,
+          pitch: parseFloat(telemetry.pitch),
+          yaw: parseFloat(telemetry.yaw),
+          roll: parseFloat(telemetry.roll),
+          gaze_x: parseFloat(telemetry.gaze_x),
+          gaze_y: parseFloat(telemetry.gaze_y),
+          target_x: parseFloat(telemetry.target_x),
+          target_y: parseFloat(telemetry.target_y),
+          blind_x: parseFloat(telemetry.blind_x),
+          blind_y: parseFloat(telemetry.blind_y),
+          blind_r: parseFloat(telemetry.blind_r),
+          confidence: parseFloat(telemetry.confidence),
+          posture_hold_duration: parseFloat(telemetry.hold_duration),
+          ambient_light_intensity: parseFloat(telemetry.ambient_light),
+          contrast_adaptation_mode: telemetry.contrast_mode,
+          client_id: "OCUGUARD_CLIENT",
+          user_token: "OCUGUARD_TOKEN",
+          history: {
+            cataract_surgery: true,
+            workplace_ergonomic_goals: ["Maintain Neutral Head Pitch", "Track Workstation Glare Baseline"]
+          }
+        };
+
+        try {
+          const response = await fetch(backendUrlInput.value.trim() || '/v1/stream/evaluate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestPayload)
+          });
+          const json = await response.json();
+          outJson.textContent = JSON.stringify(json, null, 2);
+
+          if (!response.ok) {
+            status = 'CRITICAL_ALERT';
+            prompt = `Pipeline Gateway Rejection: ${json.message || response.statusText}`;
+            outState.className = 'badge-status state-critical-alert';
+            outState.textContent = 'FAULT';
+          } else {
+            status = json.data.status || 'STANDARD_LOG';
+            prompt = json.data.action_required || 'Payload contract successfully synchronized.';
+            targetPanValue = json.data.pan_localization !== null ? json.data.pan_localization : (telemetry.yaw / 90);
+            outAgent.textContent = `LIVE NODE // ${telemetry.agentMode}`;
+            outPrompt.textContent = prompt;
+            outState.className = 'badge-status state-' + (status.toLowerCase().replace('_', '-'));
+            outState.textContent = status;
+            
+            if (status === "ESCALATION") {
+              bmeOverlay.style.display = "block"; bmeBanner.style.display = "block";
+            }
+          }
+        } catch (err) {
+          status = 'CRITICAL_ALERT';
+          prompt = `Connection Failure: Flask runtime daemon is unreached at endpoint target. Adjust back to simulation mode to test locally without server stacks.`;
+          outState.className = 'badge-status state-critical-alert';
+          outState.textContent = 'OFFLINE';
+          outJson.textContent = JSON.stringify({ error: err.message, tracking: "Verify python backend app.py runs on port 5000" }, null, 2);
+        }
+      } else {
+        // FAST MOCK LOCAL EVALUATION SIMULATOR LOOPS
+        const timestampIso = new Date().toISOString();
+        
+        if (telemetry.agentMode === "EYE_SENTINEL") {
+          outAgent.textContent = "PLUGIN // EYE_SENTINEL";
+          if (telemetry.pitch > -55) { 
+            status = "CRITICAL_ALERT"; 
+            prompt = "System Alert: Current head orientation exceeds geometric constraint (-55.0°). Adjust posture to comply with positioning parameters."; 
+          } else {
+            status = "ADAPTIVE_GUIDANCE";
+            prompt = "Geometric Positioning Guide: Follow current bubble positioning rules. Ensure airway is clear. Rotate to next position at next hour boundary.";
+          }
+        } else if (telemetry.agentMode === "OCUGUARD_CORE") {
+          outAgent.textContent = "CORE ENGINE // POSTURE_CHECK";
+          if (telemetry.pitch < -45) { status = "VIOLATION"; prompt = "Warning: Avoid forward bending past waist boundaries. Drop your height via a vertical squat."; }
+          else if (telemetry.pitch < -30) { status = "VIOLATION"; prompt = "Alert: Postural compromise detected. Avoid lying back or horizontal recline slopes."; }
+          else { status = "SAFE"; prompt = "All anterior segment vector paths reporting stable alignment indices."; }
+        } else if (telemetry.agentMode === "GAZE_COMPASS") {
+          outAgent.textContent = "PLUGIN // GAZE_COMPASS";
+          const dist = Math.hypot(telemetry.target_x - telemetry.blind_x, telemetry.target_y - telemetry.blind_y);
+          targetPanValue = Math.max(-1.0, Math.min(1.0, (telemetry.target_x - telemetry.blind_x) * 1.5));
+          
+          if (dist <= telemetry.blind_r) {
+            status = "VIOLATION";
+            const dir = targetPanValue >= 0 ? "right" : "left";
+            prompt = `Objective obscured within the central scotoma zone. Shift vision ${dir} to center the peripheral target.`;
+          } else if (dist <= telemetry.blind_r * 1.25) {
+            status = "SAFE";
+            prompt = "Target locked within usable functional peripheral vision locus.";
+          } else {
+            status = "SAFE";
+            prompt = "Target remains in clear peripheral alignment.";
+          }
+        } else if (telemetry.agentMode === "TABULAR_LAYOUT_SPEECH") {
+          outAgent.textContent = "PLUGIN // TABULAR_LAYOUT_SPEECH";
+          status = "SCHEDULED_HABIT";
+          prompt = `Paragraph Structure Detected: Document contains flowing text. Structure: Sequential paragraphs. Process line by line.`;
+          if (telemetry.transcript.toLowerCase().includes("table") || telemetry.help_request.includes("table")) {
+            prompt = `Tabular Structure Detected: Document contains a table layout. Structure: Rows and columns. Navigate systematically from top-left to bottom-right.`;
+          }
+        } else if (telemetry.agentMode === "ERGONOMIC_SCHEDULE") {
+          outAgent.textContent = "PLUGIN // ERGONOMIC_SCHEDULE";
+          if (telemetry.hold_duration >= 3600) {
+            status = "ELEVATED_ALERT";
+            prompt = "Ergonomic Alert: Sustained posture for 1+ hour detected. Stand, stretch, or move to break the habit cycle.";
+          } else if (telemetry.hold_duration >= 1800) {
+            status = "ELEVATED_ALERT";
+            prompt = "Ergonomic Cue: Postural hold duration approaching 30+ minutes. Consider a movement break.";
+          } else if (telemetry.pitch < -35.0) {
+            status = "ELEVATED_ALERT";
+            prompt = "Ergonomic Notice: Extended forward-facing posture detected. Consider adjusting your workstation or taking a postural break.";
+          } else {
+            status = "STANDARD_LOG";
+            prompt = "Postural metrics within normal parameters. Continue current wellness routine.";
+          }
+        } else if (telemetry.agentMode === "AMBIENT_LUMINANCE") {
+          outAgent.textContent = "PLUGIN // AMBIENT_LUMINANCE";
+          if (telemetry.ambient_light > 80) {
+            status = "ELEVATED_ALERT";
+            prompt = "High glare detected. Consider enabling adaptive lens tinting or adjusting viewing angle.";
+          } else if (telemetry.ambient_light < 30) {
+            status = "ELEVATED_ALERT";
+            prompt = "Low ambient light detected. Enhance contrast settings or increase acoustic description detail.";
+          } else {
+            status = "STANDARD_LOG";
+            prompt = "Ambient lighting conditions optimal for current task.";
+          }
+        } else if (telemetry.agentMode === "BE_MY_EYES") {
+          outAgent.textContent = "PLUGIN // ACOUSTIC_ESCALATION";
+          if (telemetry.confidence < 82 || telemetry.transcript.toLowerCase().includes("distorted") || telemetry.transcript.toLowerCase().includes("open")) {
+            status = "ESCALATION";
+            prompt = "System Notice: Confidence threshold or user escalation request detected. Initiating human operator connection protocol.";
+            bmeOverlay.style.display = "block"; bmeBanner.style.display = "block";
+          } else {
+            status = "SAFE";
+            prompt = "System Status: Confidence within safe parameters. Monitoring for user support requests.";
+          }
+        }
+
+        outPrompt.textContent = prompt;
+        outState.className = "badge-status state-" + status.toLowerCase().replace('_', '-');
+        outState.textContent = status;
+        
+        outJson.textContent = JSON.stringify({
+          message: "Simulation local tracking block completed",
+          data: {
+            status: status,
+            action_required: prompt,
+            confidence_score: parseFloat((telemetry.confidence / 100).toFixed(2)),
+            reasoning: "Local rule matrix simulated tracking matches parameters.",
+            timestamp: timestampIso,
+            compliance_gate: {
+              software_classification: "Assisted Orientation Aid (Non-Diagnostic Middleware)",
+              fail_safe_status: "ACTIVE_LOCAL_OVERRIDE_ENABLED"
+            }
+          },
+          timestamp: timestampIso
+        }, null, 2);
+      }
+
+      const FinalPan = Math.max(-1.0, Math.min(1.0, targetPanValue));
+      lblPan.textContent = FinalPan.toFixed(2); outPan.style.left = `${(FinalPan + 1) * 50}%`;
+
+      // Trigger audio loop generation cues on high priority alerts
+      if (status === "CRITICAL_ALERT" || status === "VIOLATION" || status === "ESCALATION" || status === "ELEVATED_ALERT") {
+        if (!speechThrottleToken) {
+          triggerVoiceAlertSynthesis(prompt);
+          speechThrottleToken = setTimeout(() => { speechThrottleToken = null; }, 2000);
+        }
+      } else { lastSpokenAlertText = ""; }
+
+      renderViews();
+    }
+
+    function draw3DView() {
+      ctx3d.clearRect(0, 0, canvas3d.width, canvas3d.height);
+      ctx3d.fillStyle = '#02040a'; ctx3d.fillRect(0, 0, canvas3d.width, canvas3d.height);
+      
+      ctx3d.save(); 
+      ctx3d.translate(canvas3d.width / 2, canvas3d.height / 2);
+
+      const pR = rad(telemetry.pitch), yR = rad(telemetry.yaw), rR = rad(telemetry.roll);
+      let nodes = [
+        {x: -45, y: -12, z: 0}, {x: -10, y: -12, z: 0}, {x: -10, y: 12, z: 0}, {x: -45, y: 12, z: 0},
+        {x: 10, y: -12, z: 0}, {x: 45, y: -12, z: 0}, {x: 45, y: 12, z: 0}, {x: 10, y: 12, z: 0}
+      ];
+
+      nodes = nodes.map(pt => {
+        let y1 = pt.y * Math.cos(pR) - pt.z * Math.sin(pR);
+        let z1 = pt.y * Math.sin(pR) + pt.z * Math.cos(pR);
+        let x2 = pt.x * Math.cos(yR) + z1 * Math.sin(yR);
+        let z2 = -pt.x * Math.sin(yR) + z1 * Math.cos(yR);
+        let x3 = x2 * Math.cos(rR) - y1 * Math.sin(rR);
+        let y3 = x2 * Math.sin(rR) + y1 * Math.cos(rR);
+        return { x: x3 * (220 / (220 + z2)), y: y3 * (220 / (220 + z2)) };
+      });
+
+      ctx3d.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx3d.font = 'bold 9px monospace';
+      ctx3d.textAlign = 'center';
+      ctx3d.fillText(oemSelector.value.toUpperCase() + " TELEMETRY PROXY", 0, -36);
+
+      const currStateStr = outState.textContent;
+      ctx3d.strokeStyle = (currStateStr === "CRITICAL_ALERT" || currStateStr === "VIOLATION") ? '#ef4444' : (currStateStr === "ESCALATION") ? '#ec4899' : (currStateStr === "ELEVATED_ALERT") ? '#f59e0b' : '#10b981';
+      ctx3d.lineWidth = 3; ctx3d.fillStyle = 'rgba(255,255,255,0.01)';
+      
+      ctx3d.beginPath(); ctx3d.moveTo(nodes[0].x, nodes[0].y); for(let i=1; i<4; i++) ctx3d.lineTo(nodes[i].x, nodes[i].y); ctx3d.closePath(); ctx3d.fill(); ctx3d.stroke();
+      ctx3d.beginPath(); ctx3d.moveTo(nodes[4].x, nodes[4].y); for(let i=5; i<8; i++) ctx3d.lineTo(nodes[i].x, nodes[i].y); ctx3d.closePath(); ctx3d.fill(); ctx3d.stroke();
+      ctx3d.strokeStyle = '#27272a'; ctx3d.beginPath(); ctx3d.moveTo(nodes[2].x, nodes[2].y); ctx3d.lineTo(nodes[7].x, nodes[7].y); ctx3d.stroke();
+      
+      ctx3d.restore();
+    }
+
+    function draw2DView() {
+      ctx2d.clearRect(0, 0, canvas2d.width, canvas2d.height);
+      ctx2d.fillStyle = '#02040a'; ctx2d.fillRect(0, 0, canvas2d.width, canvas2d.height);
+      const toCanvas = (nx, ny) => ({ x: ((nx + 1) / 2) * canvas2d.width, y: ((1 - ny) / 2) * canvas2d.height });
+      
+      const bPos = toCanvas(telemetry.blind_x, telemetry.blind_y);
+      const gPos = toCanvas(telemetry.gaze_x, telemetry.gaze_y);
+      const tPos = toCanvas(telemetry.target_x, telemetry.target_y);
+      const pxRadius = (canvas2d.height / 2) * telemetry.blind_r;
+
+      // Render custom layout variations depending on active extension agent
+      if (telemetry.agentMode === "TABULAR_LAYOUT_SPEECH") {
+        ctx2d.fillStyle = 'rgba(167, 139, 250, 0.02)'; ctx2d.fillRect(0, 0, canvas2d.width, canvas2d.height);
+        ctx2d.strokeStyle = 'rgba(255,255,255,0.06)'; ctx2d.lineWidth = 1;
+        // Draw grid overlay mockup to emphasize tabular processing
+        for (let i = 0; i < canvas2d.width; i += 40) { ctx2d.beginPath(); ctx2d.moveTo(i, 0); ctx2d.lineTo(i, canvas2d.height); ctx2d.stroke(); }
+        for (let j = 0; j < canvas2d.height; j += 40) { ctx2d.beginPath(); ctx2d.moveTo(0, j); ctx2d.lineTo(canvas2d.width, j); ctx2d.stroke(); }
+      }
+
+      if (telemetry.agentMode === "AMBIENT_LUMINANCE") {
+        // Render dynamic lighting filter visualization layers
+        const opacity = Math.min(0.6, telemetry.ambient_light / 100);
+        ctx2d.fillStyle = `rgba(245, 158, 11, ${opacity * 0.15})`;
+        ctx2d.fillRect(0, 0, canvas2d.width, canvas2d.height);
+        ctx2d.fillStyle = '#fff'; ctx2d.font = '9px monospace';
+        ctx2d.fillText(`LUMINANCE MONITOR: ${telemetry.ambient_light}% INTENSITY`, 20, 30);
+      }
+
+      if (telemetry.agentMode === 'GAZE_COMPASS') {
+        const center = { x: canvas2d.width / 2, y: canvas2d.height / 2 };
+        const riskColor = telemetry.obstacle_distance < 0.25 ? '#ef4444' : telemetry.obstacle_distance < 0.45 ? '#f59e0b' : '#10b981';
+        
+        ctx2d.strokeStyle = riskColor; ctx2d.lineWidth = 1; ctx2d.setLineDash([4, 6]);
+        ctx2d.beginPath(); ctx2d.arc(center.x, center.y, canvas2d.height * 0.4, 0, Math.PI * 2); ctx2d.stroke();
+        ctx2d.setLineDash([]);
+
+        const bearingRad = rad(telemetry.obstacle_bearing);
+        const plotRadiusPx = Math.max(20, telemetry.obstacle_distance * (canvas2d.width * 0.45));
+        const obsPos = { x: center.x + Math.sin(bearingRad) * plotRadiusPx, y: center.y - Math.cos(bearingRad) * plotRadiusPx };
+
+        ctx2d.strokeStyle = 'rgba(255,255,255,0.05)';
+        ctx2d.beginPath(); ctx2d.moveTo(center.x, center.y); ctx2d.lineTo(obsPos.x, obsPos.y); ctx2d.stroke();
+
+        ctx2d.fillStyle = riskColor; ctx2d.strokeStyle = '#ffffff'; ctx2d.lineWidth = 1.5;
+        ctx2d.beginPath(); ctx2d.arc(obsPos.x, obsPos.y, 10, 0, Math.PI * 2); ctx2d.fill(); ctx2d.stroke();
+      }
+
+      // Draw standard coordinate mapping reference anchors
+      ctx2d.fillStyle = 'rgba(249, 115, 22, 0.05)'; ctx2d.strokeStyle = '#f97316'; ctx2d.lineWidth = 2;
+      ctx2d.beginPath(); ctx2d.arc(bPos.x, bPos.y, pxRadius, 0, Math.PI * 2); ctx2d.fill(); ctx2d.stroke();
+
+      const drawNode = (pos, color) => { ctx2d.fillStyle = color; ctx2d.strokeStyle = '#fff'; ctx2d.lineWidth = 2; ctx2d.beginPath(); ctx2d.arc(pos.x, pos.y, 8, 0, Math.PI * 2); ctx2d.fill(); ctx2d.stroke(); };
+      drawNode(bPos, '#f97316'); drawNode(tPos, '#d946ef'); drawNode(gPos, '#10b981');
+    }
+
+    function renderViews() { draw3DView(); draw2DView(); }
+
+    function getMouseTarget(mx, my) {
+      const toCanvas = (nx, ny) => ({ x: ((nx + 1) / 2) * canvas2d.width, y: ((1 - ny) / 2) * canvas2d.height });
+      const points = [{ id: 'gaze', x: telemetry.gaze_x, y: telemetry.gaze_y }, { id: 'blind', x: telemetry.blind_x, y: telemetry.blind_y }, { id: 'target', x: telemetry.target_x, y: telemetry.target_y }];
+      for (const p of points) { if (Math.hypot(mx - toCanvas(p.x, p.y).x, my - toCanvas(p.x, p.y).y) < 16) return p.id; }
+      return null;
+    }
+
+    canvas2d.addEventListener('mousedown', (e) => { const r = canvas2d.getBoundingClientRect(); activeDragTarget = getMouseTarget(e.clientX - r.left, e.clientY - r.top); });
+    window.addEventListener('mousemove', (e) => {
+      if (!activeDragTarget) return;
+      const r = canvas2d.getBoundingClientRect();
+      const nx = Math.max(-1, Math.min(1, ((e.clientX - r.left) / canvas2d.width) * 2 - 1));
+      const ny = Math.max(-1, Math.min(1, 1 - ((e.clientY - r.top) / canvas2d.height) * 2));
+      if (activeDragTarget === 'gaze') { telemetry.gaze_x = nx; telemetry.gaze_y = ny; }
+      else if (activeDragTarget === 'blind') { telemetry.blind_x = nx; telemetry.blind_y = ny; }
+      else if (activeDragTarget === 'target') { telemetry.target_x = nx; telemetry.target_y = ny; }
+      processAgentOrchestrator();
+    });
+    window.addEventListener('mouseup', () => { activeDragTarget = null; });
+
+    // Link dynamic event handlers
+    document.getElementById('param_pitch').addEventListener('input', (e) => { telemetry.pitch = parseInt(e.target.value); document.getElementById('lbl_pitch').textContent = `${telemetry.pitch}°`; processAgentOrchestrator(); });
+    document.getElementById('param_yaw').addEventListener('input', (e) => { telemetry.yaw = parseInt(e.target.value); document.getElementById('lbl_yaw').textContent = `${telemetry.yaw}°`; processAgentOrchestrator(); });
+    document.getElementById('param_conf').addEventListener('input', (e) => { telemetry.confidence = parseInt(e.target.value); document.getElementById('lbl_conf').textContent = `${telemetry.confidence}%`; processAgentOrchestrator(); });
+    document.getElementById('param_obstacle_dist').addEventListener('input', (e) => { telemetry.obstacle_distance = parseInt(e.target.value) / 100; document.getElementById('lbl_obstacle_dist').textContent = `${e.target.value}%`; processAgentOrchestrator(); });
+    document.getElementById('param_obstacle_bearing').addEventListener('input', (e) => { telemetry.obstacle_bearing = parseInt(e.target.value); document.getElementById('lbl_obstacle_bearing').textContent = `${telemetry.obstacle_bearing}°`; processAgentOrchestrator(); });
+    document.getElementById('param_hold_duration').addEventListener('input', (e) => { telemetry.hold_duration = parseInt(e.target.value); document.getElementById('lbl_hold_duration').textContent = `${telemetry.hold_duration}s`; processAgentOrchestrator(); });
+    document.getElementById('param_ambient_light').addEventListener('input', (e) => { telemetry.ambient_light = parseInt(e.target.value); document.getElementById('lbl_ambient_light').textContent = `${telemetry.ambient_light}%`; processAgentOrchestrator(); });
+    document.getElementById('param_contrast_mode').addEventListener('change', (e) => { telemetry.contrast_mode = e.target.value; processAgentOrchestrator(); });
+    document.getElementById('param_help_request').addEventListener('change', (e) => { telemetry.help_request = e.target.value; processAgentOrchestrator(); });
+    
+    document.getElementById('agent_selector').addEventListener('change', (e) => { 
+      telemetry.agentMode = e.target.value; 
+      syncPanelVisibilities(); 
+      processAgentOrchestrator(); 
+    });
+
+    oemSelector.addEventListener('change', () => processAgentOrchestrator());
+    executionModeSelect.addEventListener('change', () => processAgentOrchestrator());
+
+    // Initialize UI on deployment startup
+    syncPanelVisibilities();
+    processAgentOrchestrator();
+  </script>
+</body>
+</html>
