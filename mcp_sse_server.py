@@ -63,14 +63,28 @@ async def handle_call_tool(
 # Bind transport relative routing parameters for client messaging hooks using your active tunnel link
 mcp_transport = SseServerTransport("https://shaggy-cooks-sell.loca.lt/messages")
 
-async def handle_sse_message_stream(scope, receive, send):
+async def handle_sse_message_stream(request):
     """Establish persistent SSE connection and run the core protocol loop."""
+    # Pull the unified ASGI variables directly out of Starlette's request object context
+    scope = request.scope
+    receive = request.receive
+    send = request.send
+    
     async with mcp_transport.connect_sse(scope, receive, send) as (read_stream, write_stream):
         await mcp_server.run(
             read_stream,
             write_stream,
             mcp_server.create_initialization_options()
         )
+
+##async def handle_sse_message_stream(scope, receive, send):
+##    """Establish persistent SSE connection and run the core protocol loop."""
+##    async with mcp_transport.connect_sse(scope, receive, send) as (read_stream, write_stream):
+##        await mcp_server.run(
+##            read_stream,
+##            write_stream,
+##            mcp_server.create_initialization_options()
+##        )
 
 # DISCOVERY ROUTE ENDPOINTS TO SWEEP AWAY THE SMITHBRY 404 ERRORS
 async def handle_root_index(request):
