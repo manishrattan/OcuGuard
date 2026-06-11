@@ -60,19 +60,23 @@ async def handle_call_tool(
     except Exception as e:
         return [types.TextContent(type="text", text=f"Pipeline exception: {str(e)}")]
 
-# Bind transport relative routing parameters for client messaging hooks
-mcp_transport = SseServerTransport("/messages")
+# Bind your live public localtunnel base URL to the messages endpoint
+mcp_transport = SseServerTransport("https://spicy-clubs-battle.loca.lt/messages")
 
-async def handle_sse_message_stream(scope, receive, send):
-    """Establish persistent SSE connection and run the core protocol loop."""
-    async with mcp_transport.connect_sse(scope, receive, send) as (read_stream, write_stream):
+async def handle_sse_message_stream(request):
+    """Establish persistent SSE connection using the request lifecycle scope."""
+    async with mcp_transport.connect_sse(
+        request.scope, 
+        request.receive, 
+        request.send
+    ) as (read_stream, write_stream):
         await mcp_server.run(
             read_stream,
             write_stream,
             mcp_server.create_initialization_options()
         )
 
-# Map explicit routing bounds matching standard ASGI server requirements
+# Map explicit routing parameters matching ASGI requirements
 app = Starlette(
     routes=[
         Route("/sse", endpoint=handle_sse_message_stream, methods=["GET"]),
