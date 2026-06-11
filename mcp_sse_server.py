@@ -100,7 +100,7 @@ async def handle_server_card(request):
 # Unified ASGI route table accepting both GET and POST handshakes safely
 app = Starlette(
     routes=[
-        Route("/", endpoint=handle_root_index, methods=["GET"]),
+        Route("/", endpoint=handle_root_index, methods=["GET", "POST"]),
         Route("/.well-known/mcp/server-card.json", endpoint=handle_server_card, methods=["GET"]),
         Route("/sse", endpoint=handle_sse_message_stream, methods=["GET", "POST"]),
         Route("/messages", endpoint=mcp_transport.handle_post_message, methods=["POST"])
