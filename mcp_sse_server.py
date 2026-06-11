@@ -61,7 +61,7 @@ async def handle_call_tool(
         return [types.TextContent(type="text", text=f"Pipeline exception: {str(e)}")]
 
 # Bind your live public localtunnel base URL to the messages endpoint
-mcp_transport = SseServerTransport("https://spicy-clubs-battle.loca.lt/messages")
+mcp_transport = SseServerTransport("https://shaggy-cooks-sell.loca.lt/messages")
 
 async def handle_sse_message_stream(request):
     """Establish persistent SSE connection using the request lifecycle scope."""
