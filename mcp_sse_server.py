@@ -64,11 +64,12 @@ async def handle_call_tool(
 mcp_transport = SseServerTransport("/messages")
 app = FastAPI(title="OcuGuard Spatial Middleware")
 
-@app.get("/")
-async def handle_root_index():
-    """Provide an explicit root index acknowledgement for scanning bots."""
+##@app.get("/")
+# Change this specific block in your file:
+@app.route("/", methods=["GET", "POST"])
+async def handle_root_index(request: Request):
+    """Provide an explicit root index acknowledgement for scanning bots, accepting both GET and POST pings."""
     return PlainTextResponse("OcuGuard MCP SSE Server Framework Active. Query /sse to establish channel links.")
-
 @app.get("/.well-known/mcp/server-card.json")
 async def handle_server_card():
     """Advertise server metadata card configurations cleanly to bypass auto-scan limits."""
