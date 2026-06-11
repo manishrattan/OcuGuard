@@ -2,6 +2,7 @@ import asyncio
 import logging
 from starlette.applications import Starlette
 from starlette.routing import Route
+from starlette.responses import JSONResponse, PlainTextResponse
 
 # Official Model Context Protocol Engine Core Imports
 from mcp.server import Server
@@ -48,7 +49,6 @@ async def handle_call_tool(
         raise ValueError("Invalid parameters passed to execution endpoint.")
 
     try:
-        # Import inside the block dynamically to prevent circular runtime locks
         from app import process_single_frame
         response_payload = process_single_frame(arguments)
         return [
@@ -60,25 +60,40 @@ async def handle_call_tool(
     except Exception as e:
         return [types.TextContent(type="text", text=f"Pipeline exception: {str(e)}")]
 
-# Bind your live public localtunnel base URL to the messages endpoint
+# Bind transport relative routing parameters for client messaging hooks using your active tunnel link
 mcp_transport = SseServerTransport("https://shaggy-cooks-sell.loca.lt/messages")
 
-async def handle_sse_message_stream(request):
-    """Establish persistent SSE connection using the request lifecycle scope."""
-    async with mcp_transport.connect_sse(
-        request.scope, 
-        request.receive, 
-        request.send
-    ) as (read_stream, write_stream):
+async def handle_sse_message_stream(scope, receive, send):
+    """Establish persistent SSE connection and run the core protocol loop."""
+    async with mcp_transport.connect_sse(scope, receive, send) as (read_stream, write_stream):
         await mcp_server.run(
             read_stream,
             write_stream,
             mcp_server.create_initialization_options()
         )
 
-# Map explicit routing parameters matching ASGI requirements
+# DISCOVERY ROUTE ENDPOINTS TO SWEEP AWAY THE SMITHBRY 404 ERRORS
+async def handle_root_index(request):
+    """Provide an explicit root index acknowledgement for scanning bots."""
+    return PlainTextResponse("OcuGuard MCP SSE Server Framework Active. Query /sse to establish channel links.")
+
+async def handle_server_card(request):
+    """Advertise server metadata card configurations cleanly to bypass auto-scan limits."""
+    return JSONResponse({
+        "mcp_version": "1.0.0",
+        "name": "ocuguard-spatial-middleware",
+        "version": "2.0.0",
+        "endpoints": {
+            "sse": "/sse",
+            "messages": "/messages"
+        }
+    })
+
+# Map explicit routing bounds matching standard ASGI server requirements
 app = Starlette(
     routes=[
+        Route("/", endpoint=handle_root_index, methods=["GET"]),
+        Route("/.well-known/mcp/server-card.json", endpoint=handle_server_card, methods=["GET"]),
         Route("/sse", endpoint=handle_sse_message_stream, methods=["GET"]),
         Route("/messages", endpoint=mcp_transport.handle_post_message, methods=["POST"])
     ]
@@ -86,5 +101,4 @@ app = Starlette(
 
 if __name__ == "__main__":
     import uvicorn
-    # Execute web container locally on port 3000
     uvicorn.run(app, host="0.0.0.0", port=3000)
