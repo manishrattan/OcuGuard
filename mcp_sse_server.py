@@ -22,7 +22,7 @@ async def handle_list_tools() -> list[types.Tool]:
     return [
         types.Tool(
             name="evaluate_wearable_stream",
-            description="Stateless edge middleware to optimize visual-to-acoustic layouts and monitor orientation ergonomics on smart eyewear.",
+            description="Stateless edge middleware to optimize visual-to-acoustic metadata layouts and monitor orientation ergonomics on smart eyewear.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -64,8 +64,11 @@ async def handle_call_tool(
 mcp_transport = SseServerTransport("https://shaggy-cooks-sell.loca.lt/messages")
 
 async def handle_sse_message_stream(request):
-    """Establish persistent SSE connection and run the core protocol loop."""
-    # Pull the unified ASGI variables directly out of Starlette's request object context
+    """Establish persistent SSE connection, accepting GET handshakes or POST pings."""
+    # If a bot sends a POST ping to negotiate/test headers, respond with a clean validation handshake
+    if request.method == "POST":
+        return JSONResponse({"status": "ready", "transport": "sse"})
+        
     scope = request.scope
     receive = request.receive
     send = request.send
@@ -77,16 +80,7 @@ async def handle_sse_message_stream(request):
             mcp_server.create_initialization_options()
         )
 
-##async def handle_sse_message_stream(scope, receive, send):
-##    """Establish persistent SSE connection and run the core protocol loop."""
-##    async with mcp_transport.connect_sse(scope, receive, send) as (read_stream, write_stream):
-##        await mcp_server.run(
-##            read_stream,
-##            write_stream,
-##            mcp_server.create_initialization_options()
-##        )
-
-# DISCOVERY ROUTE ENDPOINTS TO SWEEP AWAY THE SMITHBRY 404 ERRORS
+# DISCOVERY ROUTE ENDPOINTS TO SWEEP AWAY THE SMITHERY 405/404 ERRORS
 async def handle_root_index(request):
     """Provide an explicit root index acknowledgement for scanning bots."""
     return PlainTextResponse("OcuGuard MCP SSE Server Framework Active. Query /sse to establish channel links.")
@@ -103,12 +97,12 @@ async def handle_server_card(request):
         }
     })
 
-# Map explicit routing bounds matching standard ASGI server requirements
+# Unified ASGI route table accepting both GET and POST handshakes safely
 app = Starlette(
     routes=[
         Route("/", endpoint=handle_root_index, methods=["GET"]),
         Route("/.well-known/mcp/server-card.json", endpoint=handle_server_card, methods=["GET"]),
-        Route("/sse", endpoint=handle_sse_message_stream, methods=["GET"]),
+        Route("/sse", endpoint=handle_sse_message_stream, methods=["GET", "POST"]),
         Route("/messages", endpoint=mcp_transport.handle_post_message, methods=["POST"])
     ]
 )
