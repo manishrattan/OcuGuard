@@ -313,7 +313,6 @@
     function rad(deg) { return deg * (Math.PI / 180); }
 
     function syncPanelVisibilities() {
-      // Manage layout dashboard configurations dynamically
       document.getElementById('panel_gaze_compass').style.display = (telemetry.agentMode === 'GAZE_COMPASS') ? 'block' : 'none';
       gazeLegend.style.display = (telemetry.agentMode === 'GAZE_COMPASS') ? 'flex' : 'none';
       document.getElementById('panel_tabular_speech').style.display = (telemetry.agentMode === 'TABULAR_LAYOUT_SPEECH') ? 'block' : 'none';
@@ -399,7 +398,6 @@
       if (executionModeSelect.value === 'PRODUCTION') {
         outPrompt.textContent = 'Serializing structured telemetry framework down to backend middleware...';
         
-        // Match payload schema mapping expected structure in schemas.py
         const requestPayload = {
           user_id: "demo_anonymized_wearer_uuid",
           input_string: telemetry.transcript,
@@ -461,7 +459,6 @@
           outJson.textContent = JSON.stringify({ error: err.message, tracking: "Verify python backend app.py runs on port 5000" }, null, 2);
         }
       } else {
-        // FAST MOCK LOCAL EVALUATION SIMULATOR LOOPS
         const timestampIso = new Date().toISOString();
         
         if (telemetry.agentMode === "EYE_SENTINEL") {
@@ -564,8 +561,7 @@
       const FinalPan = Math.max(-1.0, Math.min(1.0, targetPanValue));
       lblPan.textContent = FinalPan.toFixed(2); outPan.style.left = `${(FinalPan + 1) * 50}%`;
 
-      // Trigger audio loop generation cues on high priority alerts
-      if (status === "CRITICAL_ALERT" || status === "VIOLATION" || status === "ESCALATION" || status === "ELEVATED_ALERT") {
+      if (prompt && prompt !== lastSpokenAlertText) {
         if (!speechThrottleToken) {
           triggerVoiceAlertSynthesis(prompt);
           speechThrottleToken = setTimeout(() => { speechThrottleToken = null; }, 2000);
@@ -624,17 +620,14 @@
       const tPos = toCanvas(telemetry.target_x, telemetry.target_y);
       const pxRadius = (canvas2d.height / 2) * telemetry.blind_r;
 
-      // Render custom layout variations depending on active extension agent
       if (telemetry.agentMode === "TABULAR_LAYOUT_SPEECH") {
         ctx2d.fillStyle = 'rgba(167, 139, 250, 0.02)'; ctx2d.fillRect(0, 0, canvas2d.width, canvas2d.height);
         ctx2d.strokeStyle = 'rgba(255,255,255,0.06)'; ctx2d.lineWidth = 1;
-        // Draw grid overlay mockup to emphasize tabular processing
         for (let i = 0; i < canvas2d.width; i += 40) { ctx2d.beginPath(); ctx2d.moveTo(i, 0); ctx2d.lineTo(i, canvas2d.height); ctx2d.stroke(); }
         for (let j = 0; j < canvas2d.height; j += 40) { ctx2d.beginPath(); ctx2d.moveTo(0, j); ctx2d.lineTo(canvas2d.width, j); ctx2d.stroke(); }
       }
 
       if (telemetry.agentMode === "AMBIENT_LUMINANCE") {
-        // Render dynamic lighting filter visualization layers
         const opacity = Math.min(0.6, telemetry.ambient_light / 100);
         ctx2d.fillStyle = `rgba(245, 158, 11, ${opacity * 0.15})`;
         ctx2d.fillRect(0, 0, canvas2d.width, canvas2d.height);
@@ -661,7 +654,6 @@
         ctx2d.beginPath(); ctx2d.arc(obsPos.x, obsPos.y, 10, 0, Math.PI * 2); ctx2d.fill(); ctx2d.stroke();
       }
 
-      // Draw standard coordinate mapping reference anchors
       ctx2d.fillStyle = 'rgba(249, 115, 22, 0.05)'; ctx2d.strokeStyle = '#f97316'; ctx2d.lineWidth = 2;
       ctx2d.beginPath(); ctx2d.arc(bPos.x, bPos.y, pxRadius, 0, Math.PI * 2); ctx2d.fill(); ctx2d.stroke();
 
@@ -691,7 +683,6 @@
     });
     window.addEventListener('mouseup', () => { activeDragTarget = null; });
 
-    // Link dynamic event handlers
     document.getElementById('param_pitch').addEventListener('input', (e) => { telemetry.pitch = parseInt(e.target.value); document.getElementById('lbl_pitch').textContent = `${telemetry.pitch}°`; processAgentOrchestrator(); });
     document.getElementById('param_yaw').addEventListener('input', (e) => { telemetry.yaw = parseInt(e.target.value); document.getElementById('lbl_yaw').textContent = `${telemetry.yaw}°`; processAgentOrchestrator(); });
     document.getElementById('param_conf').addEventListener('input', (e) => { telemetry.confidence = parseInt(e.target.value); document.getElementById('lbl_conf').textContent = `${telemetry.confidence}%`; processAgentOrchestrator(); });
@@ -711,7 +702,6 @@
     oemSelector.addEventListener('change', () => processAgentOrchestrator());
     executionModeSelect.addEventListener('change', () => processAgentOrchestrator());
 
-    // Initialize UI on deployment startup
     syncPanelVisibilities();
     processAgentOrchestrator();
   </script>

@@ -1,0 +1,74 @@
+{
+  "mcp_version": "1.0.0",
+  "server_name": "ocuguard-spatial-middleware",
+  "server_version": "2.0.0",
+  "capabilities": {
+    "tools": true
+  },
+  "tools": [
+    {
+      "name": "evaluate_wearable_stream",
+      "description": "Stateless edge middleware to optimize visual-to-acoustic metadata layouts, process kinematics, and monitor user-calibrated orientation ergonomics.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "Anonymized unique hardware identifier for the consumer eyewear node."
+          },
+          "input_string": {
+            "type": "string",
+            "description": "Raw unstructured document layout, text block, or microphone voice annotation transcript."
+          },
+          "agent_mode": {
+            "type": "string",
+            "enum": [
+              "EYE_SENTINEL",
+              "OCUGUARD_CORE",
+              "GAZE_COMPASS",
+              "TABULAR_LAYOUT_SPEECH",
+              "ERGONOMIC_SCHEDULE",
+              "AMBIENT_LUMINANCE",
+              "BE_MY_EYES"
+            ],
+            "description": "The specific sub-agent middleware configuration chosen to process the stream frames."
+          },
+          "pitch": {
+            "type": "number",
+            "description": "Geometric head-tilt angle tracking metric along the horizontal X-axis."
+          },
+          "yaw": {
+            "type": "number",
+            "description": "Geometric panning rotation tracking metric along the vertical Y-axis."
+          },
+          "roll": {
+            "type": "number",
+            "description": "Lateral tilt offset relative to the local horizon coordinates."
+          },
+          "posture_hold_duration": {
+            "type": "number",
+            "description": "Continuous duration counter in seconds spent at the current orientation coordinates."
+          },
+          "ambient_light_intensity": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Percentage value tracking the lux measurement from the forward optical sensor."
+          },
+          "contrast_adaptation_mode": {
+            "type": "string",
+            "enum": ["standard", "high_contrast", "low_contrast"],
+            "description": "The active filter layout layer mapped over the user glass lenses."
+          }
+        },
+        "required": [
+          "user_id",
+          "input_string",
+          "agent_mode",
+          "pitch",
+          "yaw"
+        ]
+      }
+    }
+  ]
+}
