@@ -61,7 +61,8 @@ async def handle_call_tool(
         return [types.TextContent(type="text", text=f"Pipeline exception: {str(e)}")]
 
 # Bind transport relative routing parameters for client messaging hooks using your active tunnel link
-mcp_transport = SseServerTransport("https://shaggy-cooks-sell.loca.lt/messages")
+# Change this line from the full localtunnel URL back to a pure relative path string
+mcp_transport = SseServerTransport("/messages")
 
 async def handle_sse_message_stream(request):
     """Establish persistent SSE connection, accepting GET handshakes or POST pings."""
