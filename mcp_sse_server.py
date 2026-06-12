@@ -64,12 +64,15 @@ async def handle_call_tool(
 mcp_transport = SseServerTransport("/messages")
 app = FastAPI(title="OcuGuard Spatial Middleware")
 
-@app.api_route("/", methods=["GET", "POST"])
-async def handle_root_index(request: Request):
-    """Stateless landing checkpoint for pings and status confirmation."""
-    if request.method == "POST":
-        return JSONResponse({"status": "active", "mcp_gateway": "online"})
+@app.get("/")
+async def handle_root_get():
+    """Provide an explicit root index acknowledgement for scanning browsers."""
     return PlainTextResponse("OcuGuard MCP SSE Server Framework Active. Query /sse to establish channel links.")
+
+@app.post("/")
+async def handle_root_post(request: Request):
+    """Proxy fallback endpoint: Route raw incoming scanner requests straight down to the engine."""
+    return await mcp_transport.handle_post_message(request.scope, request._receive, request._send)
 
 @app.get("/.well-known/mcp/server-card.json")
 async def handle_server_card():
@@ -97,9 +100,9 @@ async def handle_sse(request: Request):
         )
 
 @app.post("/sse")
-async def handle_sse_post():
-    """Fallback route handling for external testing frames."""
-    return JSONResponse({"status": "ready", "transport": "sse"})
+async def handle_sse_post(request: Request):
+    """Trap structural ping queries explicitly using the core transport proxy engine."""
+    return await mcp_transport.handle_post_message(request.scope, request._receive, request._send)
 
 @app.post("/messages")
 async def handle_messages(request: Request):
