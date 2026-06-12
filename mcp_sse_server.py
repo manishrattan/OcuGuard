@@ -15,13 +15,16 @@ from mcp.server.sse import SseServerTransport
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("OcuGuard.MCPSSE")
 
-# 1. Instantiate the official Model Context Protocol core wrapper object
-mcp_server = Server("ocuguard-spatial-middleware")
+# 1. Instantiate the Server object cleanly with strictly supported SDK constructor keys
+mcp_server = Server(
+    name="ocuguard-spatial-middleware",
+    version="2.0.0"
+)
 
 @mcp_server.list_tools()
 async def handle_list_tools() -> List[types.Tool]:
     """
-    Expose the OcuGuard multi-agent pipeline inputs to external LLMs.
+    Expose the OcuGuard multi-agent pipeline inputs to external LLMs with strict semantic descriptions.
     """
     return [
         types.Tool(
@@ -35,15 +38,15 @@ async def handle_list_tools() -> List[types.Tool]:
                 "properties": {
                     "user_id": {
                         "type": "string", 
-                        "description": "Anonymized hardware node token or wearer UUID."
+                        "description": "The anonymized unique hardware node token or tracking UUID assigned to the consumer eyewear device."
                     },
                     "input_string": {
                         "type": "string", 
-                        "description": "OCR structure string, vague symptom, or audio transcription phrase to triage."
+                        "description": "The textual payload to analyze, supporting raw OCR transcriptions, document text, or verbal symptom phrases."
                     },
                     "agent_mode": {
                         "type": "string", 
-                        "description": "Target sub-agent plugin layer to direct the tracking payload into.",
+                        "description": "The specific operational sub-agent plugin designed to process the structural context of the telemetry frame.",
                         "enum": [
                             "EYE_SENTINEL", 
                             "OCUGUARD_CORE", 
@@ -57,27 +60,27 @@ async def handle_list_tools() -> List[types.Tool]:
                     },
                     "pitch": {
                         "type": "number", 
-                        "description": "Horizontal X-axis inertial head tracking telemetry metric."
+                        "description": "The real-time horizontal X-axis tracking metric captured from the eyewear's on-board inertial measurement unit (IMU)."
                     },
                     "yaw": {
                         "type": "number", 
-                        "description": "Vertical Y-axis pan coordinate matrix vector tracking metric."
+                        "description": "The real-time vertical Y-axis rotational tracking metric captured from the eyewear's coordinate spatial matrix."
                     },
                     "multimodal_flags": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "Optional background structural triggers or contextual indicators (e.g., 'shadow', 'sudden')."
+                        "description": "Optional list strings flagging unique environmental conditions or urgent user contexts (e.g., ['shadow', 'sudden', 'driving_context'])."
                     },
                     "history": {
                         "type": "object",
                         "properties": {
-                            "cataract_surgery": {"type": "boolean"},
-                            "age_over_50": {"type": "boolean"},
-                            "retinal_disease": {"type": "boolean"},
-                            "diabetic_retinopathy": {"type": "boolean"},
-                            "previous_detachment": {"type": "boolean"}
+                            "cataract_surgery": {"type": "boolean", "description": "True if the wearer has a history of post-cataract vision recovery restrictions."},
+                            "age_over_50": {"type": "boolean", "description": "True if the wearer matches demographic criteria for elevated clinical risk windows."},
+                            "retinal_disease": {"type": "boolean", "description": "True if pre-existing retinal anomalies are configured within user preferences."},
+                            "diabetic_retinopathy": {"type": "boolean", "description": "True if active diabetic microvascular telemetry weights apply."},
+                            "previous_detachment": {"type": "boolean", "description": "True if the user profile tracks structural history of structural detachment paths."}
                         },
-                        "description": "User-configured medical/post-surgical risk background switches for weighting rules."
+                        "description": "User-configured health history toggles used by the triage engine to multiplicatively calculate warning metrics."
                     }
                 },
                 "required": ["user_id", "input_string", "agent_mode", "pitch", "yaw"]
@@ -108,7 +111,18 @@ async def handle_call_tool(
             f"Action Required: {action}\n"
             f"Orchestration Reasoning: {reasoning}"
         )
-        return [types.TextContent(type="text", text=output_text)]
+        
+        # Instantiate a strict, type-safe types.Annotations constructor to pass Pylance inspection completely
+        return [
+            types.TextContent(
+                type="text", 
+                text=output_text,
+                annotations=types.Annotations(
+                    audience=["user", "assistant"],
+                    priority=1.0
+                )
+            )
+        ]
     except Exception as e:
         logger.error(f"Execution error within underlying agent pipeline: {str(e)}")
         return [types.TextContent(type="text", text=f"OcuGuard Pipeline Exception: {str(e)}")]
@@ -127,7 +141,6 @@ async def process_stateless_jsonrpc(request: Request) -> JSONResponse:
         if not body_bytes:
             return JSONResponse({"jsonrpc": "2.0", "error": {"code": -32700, "message": "Parse error"}})
             
-        import json
         body = json.loads(body_bytes.decode("utf-8"))
         rpc_id = body.get("id")
         method = body.get("method", "")
@@ -148,16 +161,16 @@ async def process_stateless_jsonrpc(request: Request) -> JSONResponse:
                             "inputSchema": {
                                 "type": "object",
                                 "properties": {
-                                    "user_id": {"type": "string"},
-                                    "input_string": {"type": "string"},
-                                    "agent_mode": {"type": "string"},
-                                    "pitch": {"type": "number"},
-                                    "yaw": {"type": "number"},
-                                    "multimodal_flags": {"type": "array", "items": {"type": "string"}},
-                                    "history": {"type": "object"}
+                                    "user_id": {"type": "string", "description": "The anonymized tracking UUID."},
+                                    "input_string": {"type": "string", "description": "The text payload to analyze."},
+                                    "agent_mode": {"type": "string", "description": "The specific sub-agent plugin mode."},
+                                    "pitch": {"type": "number", "description": "Horizontal X-axis tracking metric."},
+                                    "yaw": {"type": "number", "description": "Vertical Y-axis tracking metric."},
+                                    "multimodal_flags": {"type": "array", "items": {"type": "string"}, "description": "Optional background triggers."},
+                                    "history": {"type": "object", "description": "User risk preferences."}
                                 },
                                 "required": ["user_id", "input_string", "agent_mode", "pitch", "yaw"]
-                            }
+                              }
                         }
                     ]
                 }
@@ -176,11 +189,16 @@ async def process_stateless_jsonrpc(request: Request) -> JSONResponse:
                 "result": {
                     "protocolVersion": "2024-11-05",
                     "capabilities": {"tools": {}},
-                    "serverInfo": {"name": "ocuguard-spatial-middleware", "version": "2.0.0"}
+                    "serverInfo": {
+                        "name": "ocuguard-spatial-middleware", 
+                        "version": "2.0.0",
+                        "description": "Stateless adaptive middleware optimizing ergonomic telemetry and spatial computing pipelines for smart eyewear.",
+                        "homepage": "https://github.com/manishrattan/ocuguard-spatial",
+                        "icon": "https://raw.githubusercontent.com/manishrattan/ocuguard-spatial/main/icon.png"
+                    }
                 }
             })
             
-        # Secure explicit fallback structural mapping for unknown batch targets to appease strict validators
         return JSONResponse({
             "jsonrpc": "2.0", 
             "id": rpc_id, 
@@ -209,11 +227,24 @@ async def handle_root_post(request: Request):
 
 @app.get("/.well-known/mcp/server-card.json")
 async def handle_server_card():
-    """Advertise server card endpoints to allow automatic tool mapping discovery."""
+    """
+    Advertise enriched metadata server card definitions matching strict Smithery schema rules.
+    This precise layout satisfies all Server Metadata validation checkpoints.
+    """
     return JSONResponse({
         "mcp_version": "1.0.0",
         "name": "ocuguard-spatial-middleware",
         "version": "2.0.0",
+        "description": "Stateless adaptive middleware optimizing ergonomic telemetry and spatial computing pipelines for smart eyewear.",
+        "homepage": "https://github.com/manishrattan/ocuguard-spatial",
+        "icon": "https://raw.githubusercontent.com/manishrattan/ocuguard-spatial/main/icon.png",
+        "app": {
+            "name": "ocuguard-spatial-middleware",
+            "version": "2.0.0",
+            "description": "Stateless adaptive middleware optimizing ergonomic telemetry and spatial computing pipelines for smart eyewear.",
+            "homepage": "https://github.com/manishrattan/ocuguard-spatial",
+            "icon": "https://raw.githubusercontent.com/manishrattan/ocuguard-spatial/main/icon.png"
+        },
         "endpoints": {
             "sse": "/sse",
             "messages": "/messages"
