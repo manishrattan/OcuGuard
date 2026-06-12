@@ -1,0 +1,24 @@
+version: "1.0.0"
+package:
+  name: "ocuguard-spatial-middleware"
+  version: "2.0.0"
+  description: "Stateless adaptive middleware optimizing ergonomic telemetry and spatial computing pipelines for smart eyewear."
+  homepage: "https://github.com/manishrattan/ocuguard-spatial"
+  icon: "https://raw.githubusercontent.com/manishrattan/ocuguard-spatial/main/icon.png"
+profiles:
+  default:
+    name: "OcuGuard Spatial Middleware"
+    entrypoint: "mcp_sse_server.py"
+    configSchema:
+      type: "object"
+      properties:
+        OPENAI_API_KEY:
+          type: "string"
+          description: "Your secure OpenAI cloud access token required by the Eye Sentinel, Gaze Compass, and Be My Eyes sub-agent matrices."
+          secret: true
+        API_KEY:
+          type: "string"
+          description: "Optional internal system token to protect administration endpoints and enforce rate-limiting thresholds."
+          secret: true
+      required:
+        - OPENAI_API_KEY
