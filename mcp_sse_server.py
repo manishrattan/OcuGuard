@@ -101,6 +101,8 @@ async def process_stateless_jsonrpc(request: Request):
             return JSONResponse({"jsonrpc": "2.0", "id": rpc_id, "result": {"resources": []}})
         elif "prompts/list" in method:
             return JSONResponse({"jsonrpc": "2.0", "id": rpc_id, "result": {"prompts": []}})
+        elif "triggers/list" in method:
+            return JSONResponse({"jsonrpc": "2.0", "id": rpc_id, "result": {"triggers": []}})
         elif "initialize" in method:
             return JSONResponse({
                 "jsonrpc": "2.0",
