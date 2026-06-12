@@ -112,7 +112,7 @@ async def handle_call_tool(
             f"Orchestration Reasoning: {reasoning}"
         )
         
-        # Instantiate a strict, type-safe types.Annotations constructor to pass Pylance inspection completely
+        # Explicit constructor formatting clears Pylance rules smoothly
         return [
             types.TextContent(
                 type="text", 

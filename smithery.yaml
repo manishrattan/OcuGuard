@@ -22,3 +22,43 @@ profiles:
           secret: true
       required:
         - OPENAI_API_KEY
+    tools:
+      - name: "evaluate_wearable_stream"
+        description: "Stateless edge middleware to optimize visual-to-acoustic metadata layouts, evaluate triage keywords, and monitor orientation ergonomics on smart eyewear."
+        inputSchema:
+          type: "object"
+          properties:
+            user_id:
+              type: "string"
+              description: "The anonymized unique hardware node token or tracking UUID assigned to the consumer eyewear device."
+            input_string:
+              type: "string"
+              description: "The textual payload to analyze, supporting raw OCR transcriptions, document text, or verbal symptom phrases."
+            agent_mode:
+              type: "string"
+              description: "The specific operational sub-agent plugin designed to process the structural context of the telemetry frame."
+              enum: ["EYE_SENTINEL", "OCUGUARD_CORE", "GAZE_COMPASS", "TABULAR_LAYOUT_SPEECH", "ERGONOMIC_SCHEDULE", "AMBIENT_LUMINANCE", "BE_MY_EYES", "PRE_OP_BRIDGE"]
+            pitch:
+              type: "number"
+              description: "The real-time horizontal X-axis tracking metric captured from the eyewear's on-board inertial measurement unit (IMU)."
+            yaw:
+              type: "number"
+              description: "The real-time vertical Y-axis rotational tracking metric captured from the eyewear's coordinate spatial matrix."
+            multimodal_flags:
+              type: "array"
+              items:
+                type: "string"
+              description: "Optional list strings flagging unique environmental conditions or urgent user contexts."
+            history:
+              type: "object"
+              description: "User-configured health history toggles used by the triage engine to multiplicatively calculate warning metrics."
+          required: ["user_id", "input_string", "agent_mode", "pitch", "yaw"]
+        outputSchema:
+          type: "object"
+          properties:
+            text:
+              type: "string"
+              description: "The plaintext response block string carrying severity rings, compliance tags, and action items."
+        annotations:
+          audience: ["user", "assistant"]
+          priority: 1.0
