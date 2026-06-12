@@ -66,7 +66,7 @@ async def handle_list_tools() -> List[types.Tool]:
                     "multimodal_flags": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "Optional background structural triggers or contextual indicators."
+                        "description": "Optional background structural triggers or contextual indicators (e.g., 'shadow', 'sudden')."
                     },
                     "history": {
                         "type": "object",
@@ -127,6 +127,7 @@ async def process_stateless_jsonrpc(request: Request) -> JSONResponse:
         if not body_bytes:
             return JSONResponse({"jsonrpc": "2.0", "error": {"code": -32700, "message": "Parse error"}})
             
+        import json
         body = json.loads(body_bytes.decode("utf-8"))
         rpc_id = body.get("id")
         method = body.get("method", "")
@@ -167,7 +168,7 @@ async def process_stateless_jsonrpc(request: Request) -> JSONResponse:
         elif "prompts/list" in method:
             return JSONResponse({"jsonrpc": "2.0", "id": rpc_id, "result": {"prompts": []}})
         elif "triggers/list" in method:
-            return JSONResponse({"jsonrpc": "2.0", "id": rpc_id, "result": {"triggers": []}})
+            return JSONResponse({"jsonrpc": "2.0", "id": rpc_id, "result": {"triggers": [], "events": []}})
         elif "initialize" in method:
             return JSONResponse({
                 "jsonrpc": "2.0",
@@ -183,7 +184,7 @@ async def process_stateless_jsonrpc(request: Request) -> JSONResponse:
         return JSONResponse({
             "jsonrpc": "2.0", 
             "id": rpc_id, 
-            "result": {"tools": [], "resources": [], "prompts": [], "triggers": []}
+            "result": {"tools": [], "resources": [], "prompts": [], "triggers": [], "events": []}
         })
     except Exception as e:
         logger.error(f"Error handling stateless proxy crawler call structure: {e}")
@@ -191,7 +192,7 @@ async def process_stateless_jsonrpc(request: Request) -> JSONResponse:
     return JSONResponse({
         "jsonrpc": "2.0", 
         "id": 1, 
-        "result": {"tools": [], "resources": [], "prompts": [], "triggers": []}
+        "result": {"tools": [], "resources": [], "prompts": [], "triggers": [], "events": []}
     })
 
 @app.get("/")
