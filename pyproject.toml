@@ -1,5 +1,5 @@
 [project]
-name = "ocuguard-spatial-middleware"
+name = "ocuguard-spatial"
 version = "2.0.0"
 description = "Stateless adaptive middleware optimizing ergonomic telemetry and spatial computing pipelines for smart eyewear."
 readme = "README.md"

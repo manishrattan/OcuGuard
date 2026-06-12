@@ -1,6 +1,6 @@
 version: "1.0.0"
 package:
-  name: "ocuguard-spatial-middleware"
+  name: "ocuguard-spatial"
   version: "2.0.0"
   description: "Stateless adaptive middleware optimizing ergonomic telemetry and spatial computing pipelines for smart eyewear."
   homepage: "https://github.com/manishrattan/ocuguard-spatial"
@@ -53,7 +53,8 @@ profiles:
               type: "object"
               description: "User-configured health history toggles used by the triage engine to multiplicatively calculate warning metrics."
           required: ["user_id", "input_string", "agent_mode", "pitch", "yaw"]
-        outputSchema:
+        # FIXED: Mapped properly to the standard Smithery structural format
+        output:
           type: "object"
           properties:
             text:

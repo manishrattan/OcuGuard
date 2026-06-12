@@ -17,7 +17,7 @@ logger = logging.getLogger("OcuGuard.MCPSSE")
 
 # 1. Instantiate the Server object cleanly with strictly supported SDK constructor keys
 mcp_server = Server(
-    name="ocuguard-spatial-middleware",
+    name="ocuguard-spatial",
     version="2.0.0"
 )
 
