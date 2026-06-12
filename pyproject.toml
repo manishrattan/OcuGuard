@@ -19,8 +19,8 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/manishrattan/ocuguard-spatial"
+Homepage = "https://github.com/manishrattan/ocuguard"
 
 [tool.smithery]
 entrypoint = "mcp_sse_server.py"
-icon = "https://raw.githubusercontent.com/manishrattan/ocuguard-spatial/main/icon.png"
+icon = "https://raw.githubusercontent.com/manishrattan/ocuguard/main/icon.png"

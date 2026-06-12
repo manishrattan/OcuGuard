@@ -53,7 +53,6 @@ profiles:
               type: "object"
               description: "User-configured health history toggles used by the triage engine to multiplicatively calculate warning metrics."
           required: ["user_id", "input_string", "agent_mode", "pitch", "yaw"]
-        # FIXED: Mapped properly to the standard Smithery structural format
         output:
           type: "object"
           properties:
