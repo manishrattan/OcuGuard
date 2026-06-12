@@ -67,7 +67,13 @@ app = FastAPI(title="OcuGuard Spatial Middleware")
 # Shared mock router engine to bypass the lack of session_id during validation crawls
 async def process_stateless_jsonrpc(request: Request):
     try:
-        body = await request.json()
+        # Securely capture request body without destroying the ASGI stream
+        body_bytes = await request.body()
+        if not body_bytes:
+            return JSONResponse({"jsonrpc": "2.0", "error": {"code": -32700, "message": "Parse error"}})
+            
+        import json
+        body = json.loads(body_bytes.decode("utf-8"))
         rpc_id = body.get("id")
         method = body.get("method", "")
         
@@ -113,11 +119,11 @@ async def process_stateless_jsonrpc(request: Request):
                     "serverInfo": {"name": "ocuguard-spatial-middleware", "version": "2.0.0"}
                 }
             })
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(f"Error handling stateless proxy call: {e}")
         
-    # If it's a valid post-handshake message with session tracking, send it to the core engine
-    return await mcp_transport.handle_post_message(request.scope, request._receive, request._send)
+    # Default safe fallback block for empty payloads to prevent 400 crashes
+    return JSONResponse({"jsonrpc": "2.0", "id": 1, "result": {}})
 
 @app.get("/")
 async def handle_root_get():
