@@ -66,9 +66,9 @@ app = FastAPI(title="OcuGuard Spatial Middleware")
 
 @app.api_route("/", methods=["GET", "POST"])
 async def handle_root_index(request: Request):
-    """Fallback router: Handles browser GET requests and redirects POST queries to the engine."""
+    """Stateless landing checkpoint for pings and status confirmation."""
     if request.method == "POST":
-        return await mcp_transport.handle_post_message(request.scope, request._receive, request._send)
+        return JSONResponse({"status": "active", "mcp_gateway": "online"})
     return PlainTextResponse("OcuGuard MCP SSE Server Framework Active. Query /sse to establish channel links.")
 
 @app.get("/.well-known/mcp/server-card.json")
