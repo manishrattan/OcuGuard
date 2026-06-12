@@ -1,0 +1,26 @@
+[project]
+name = "ocuguard-spatial-middleware"
+version = "2.0.0"
+description = "Stateless adaptive middleware optimizing ergonomic telemetry and spatial computing pipelines for smart eyewear."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "Manish Rattan" }
+]
+keywords = ["mcp", "spatial-computing", "middleware", "telemetry"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+]
+dependencies = [
+    "fastapi>=0.100.0",
+    "uvicorn>=0.22.0",
+    "mcp>=2.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/manishrattan/ocuguard-spatial"
+
+[tool.smithery]
+entrypoint = "mcp_sse_server.py"
+icon = "https://raw.githubusercontent.com/manishrattan/ocuguard-spatial/main/icon.png"
