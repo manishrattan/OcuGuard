@@ -30,12 +30,15 @@ os.environ["API_KEY"] = "TEST_SECRET_KEY"
 os.environ["OPENAI_API_KEY"] = "mock-openai-key"
 
 from app import app, rate_limits, stats_db
-from schemas import TelemetryFrame, HistoryInfo
-from supervisor import SupervisorAgent
-from eye_sentinel import EyeSentinelAgent
-from gaze_compass import GazeCompassAgent
-from preop_waitlist import PreOpWaitlistAgent
-from be_my_eyes import BeMyEyesAgent
+from core.schemas import TelemetryFrame, HistoryInfo
+from agents.supervisor import SupervisorAgent
+from agents.eye_sentinel import EyeSentinelAgent
+from agents.gaze_compass import GazeCompassAgent
+from agents.preop_waitlist import PreOpWaitlistAgent
+from agents.be_my_eyes import BeMyEyesAgent
+from agents.aniseikonia_scaling_agent import AniseikoniaScalingAgent
+from agents.metamorphopsia_grid_remapper_agent import MetamorphopsiaGridRemapperAgent
+from agents.biofeedback_anxiety_sentinel_agent import BiofeedbackAnxietySentinelAgent
 
 # ----------------- FIXTURES -----------------
 
@@ -446,7 +449,7 @@ def test_driving_context_emergency(client):
 # ----------------- LLM MONKEYPATCH TESTS -----------------
 
 def test_eye_sentinel_llm_success(monkeypatch):
-    import eye_sentinel
+    from agents import eye_sentinel
     monkeypatch.setattr(eye_sentinel, "LANGCHAIN_AVAILABLE", True)
     mock_chat = MagicMock()
     monkeypatch.setattr(eye_sentinel, "ChatOpenAI", mock_chat)
@@ -479,7 +482,7 @@ def test_eye_sentinel_llm_success(monkeypatch):
     mock_llm.invoke.assert_called_once()
 
 def test_eye_sentinel_llm_failure_cascade(monkeypatch):
-    import eye_sentinel
+    from agents import eye_sentinel
     monkeypatch.setattr(eye_sentinel, "LANGCHAIN_AVAILABLE", True)
     mock_chat = MagicMock()
     monkeypatch.setattr(eye_sentinel, "ChatOpenAI", mock_chat)

@@ -4,8 +4,8 @@
 import logging
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional
-from plugin_interface import OcuGuardSubAgentPlugin
-from schemas import TelemetryFrame, StreamResponseData
+from core.plugin_interface import OcuGuardSubAgentPlugin
+from core.schemas import TelemetryFrame, StreamResponseData
 
 logger = logging.getLogger("OcuGuard.AmbientLuminance")
 

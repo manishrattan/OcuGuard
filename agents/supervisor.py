@@ -22,7 +22,7 @@
 import re
 import logging
 from typing import Dict, Any, Tuple
-from schemas import TelemetryFrame
+from core.schemas import TelemetryFrame
 
 logger = logging.getLogger("OcuGuard.Supervisor")
 

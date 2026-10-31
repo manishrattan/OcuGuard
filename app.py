@@ -30,14 +30,17 @@ from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 from pydantic import ValidationError
 
-from schemas import TelemetryFrame, AdaptivePayloadResponse, StreamResponseData
-from supervisor import SupervisorAgent
-from eye_sentinel import EyeSentinelAgent
-from gaze_compass import GazeCompassAgent
-from tabular_layout_speech import TabularLayoutSpeechAgent
-from ergonomic_schedule import ErgonomicScheduleAgent
-from ambient_luminance import AmbientLuminanceAgent
-from be_my_eyes import BeMyEyesAgent
+from core.schemas import TelemetryFrame, AdaptivePayloadResponse, StreamResponseData
+from agents.supervisor import SupervisorAgent
+from agents.eye_sentinel import EyeSentinelAgent
+from agents.gaze_compass import GazeCompassAgent
+from agents.tabular_layout_speech import TabularLayoutSpeechAgent
+from agents.ergonomic_schedule import ErgonomicScheduleAgent
+from agents.ambient_luminance import AmbientLuminanceAgent
+from agents.be_my_eyes import BeMyEyesAgent
+from agents.aniseikonia_scaling_agent import AniseikoniaScalingAgent
+from agents.metamorphopsia_grid_remapper_agent import MetamorphopsiaGridRemapperAgent
+from agents.biofeedback_anxiety_sentinel_agent import BiofeedbackAnxietySentinelAgent
 
 # Load environment variables
 load_dotenv()
@@ -59,6 +62,9 @@ tabular_layout_speech = TabularLayoutSpeechAgent()
 ergonomic_schedule = ErgonomicScheduleAgent()
 ambient_luminance = AmbientLuminanceAgent()
 be_my_eyes = BeMyEyesAgent()
+calibration_agent = AniseikoniaScalingAgent()
+remapper_agent = MetamorphopsiaGridRemapperAgent()
+anxiety_agent = BiofeedbackAnxietySentinelAgent()
 
 # Global Statistics (For /v1/system/stats)
 stats_db = {
@@ -201,6 +207,42 @@ def process_single_frame(frame_data: Dict[str, Any]) -> Dict[str, Any]:
         else:
             response_data = be_my_eyes.evaluate_safety(redacted_frame, timestamp)
             
+    elif agent_mode == "ANISEIKONIA_SCALING":
+        payload = calibration_agent.calibrate(redacted_frame.model_dump())
+        response_data = StreamResponseData(
+            status=payload.status,
+            action_required="Apply inverse size calibration and UI warp matrix.",
+            confidence_score=0.93,
+            escalation_trigger=None,
+            reasoning=payload.cognitive_reassurance_string,
+            timestamp=timestamp,
+            ui_transformations=payload.ui_transformations,
+            cognitive_reassurance_string=payload.cognitive_reassurance_string
+        )
+    elif agent_mode == "METAMORPHOPSIA_GRID_REMAPPER":
+        payload = remapper_agent.remap(redacted_frame.model_dump())
+        response_data = StreamResponseData(
+            status=payload.status,
+            action_required="Apply the warped grid transform to stabilize text geometry.",
+            confidence_score=0.91,
+            escalation_trigger=None,
+            reasoning=payload.cognitive_reassurance_string,
+            timestamp=timestamp,
+            ui_transformations=payload.ui_transformations,
+            cognitive_reassurance_string=payload.cognitive_reassurance_string
+        )
+    elif agent_mode == "BIOFEEDBACK_ANXIETY_SENTINEL":
+        payload = anxiety_agent.evaluate(redacted_frame.model_dump())
+        response_data = StreamResponseData(
+            status=payload.status,
+            action_required="Follow adaptive reassurance and continue gradual perceptual pacing.",
+            confidence_score=0.90,
+            escalation_trigger=None,
+            reasoning=payload.cognitive_reassurance_string,
+            timestamp=timestamp,
+            ui_transformations=payload.ui_transformations,
+            cognitive_reassurance_string=payload.cognitive_reassurance_string
+        )
     else:
         # Unknown agent - default to EYE_SENTINEL
         response_data = eye_sentinel.evaluate_triage(redacted_frame, timestamp)

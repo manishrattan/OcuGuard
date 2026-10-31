@@ -4,6 +4,9 @@ import mcp.types as types
 from mcp.server import Server
 from mcp.server.models import InitializationOptions
 from app import process_single_frame
+from agents.aniseikonia_scaling_agent import AniseikoniaScalingAgent
+from agents.metamorphopsia_grid_remapper_agent import MetamorphopsiaGridRemapperAgent
+from agents.biofeedback_anxiety_sentinel_agent import BiofeedbackAnxietySentinelAgent
 
 # Initialize the official MCP Server object
 server = Server("ocuguard-spatial-middleware")
@@ -22,12 +25,39 @@ async def handle_list_tools() -> list[types.Tool]:
                     "input_string": {"type": "string", "description": "OCR document string or voice annotation transcript."},
                     "agent_mode": {
                         "type": "string", 
-                        "enum": ["EYE_SENTINEL", "OCUGUARD_CORE", "GAZE_COMPASS", "TABULAR_LAYOUT_SPEECH", "ERGONOMIC_SCHEDULE", "AMBIENT_LUMINANCE", "BE_MY_EYES"]
+                        "enum": ["EYE_SENTINEL", "OCUGUARD_CORE", "GAZE_COMPASS", "TABULAR_LAYOUT_SPEECH", "ERGONOMIC_SCHEDULE", "AMBIENT_LUMINANCE", "BE_MY_EYES", "ANISEIKONIA_SCALING", "METAMORPHOPSIA_GRID_REMAPPER", "BIOFEEDBACK_ANXIETY_SENTINEL"]
                     },
                     "pitch": {"type": "number", "description": "Horizontal head tilt angle metric."},
                     "yaw": {"type": "number", "description": "Vertical pan rotation coordinate."}
                 },
                 "required": ["user_id", "input_string", "agent_mode", "pitch", "yaw"]
+            }
+        ),
+        types.Tool(
+            name="ocuguard_calibrate_vision",
+            description="Generate calibrated UI transformations for perceived size and text warping distortions, returning a safe scale factor and CSS warp matrix.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "visual_field_clearance": {"type": "number", "description": "Current visible field clearance ratio."},
+                    "perceived_size_delta": {"type": "number", "description": "Measured asymmetric perceived size delta."},
+                    "text_wavy_index": {"type": "number", "description": "Degree of text waviness perceived by the user."},
+                    "oem_platform": {"type": "string", "description": "Target OEM platform identifier."}
+                },
+                "required": ["visual_field_clearance", "perceived_size_delta", "text_wavy_index"]
+            }
+        ),
+        types.Tool(
+            name="ocuguard_triage_anxiety",
+            description="Evaluate vocal stress and panic phrases to deliver empathetic reassurance grounded in 12-to-18 month neuroadaptation milestones.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "input_string": {"type": "string", "description": "Captured user transcript or anxiety phrase."},
+                    "vocal_stress_score": {"type": "number", "description": "Normalized vocal stress score from biofeedback sensors."},
+                    "oem_platform": {"type": "string", "description": "Target OEM platform identifier."}
+                },
+                "required": ["input_string", "vocal_stress_score"]
             }
         )
     ]

@@ -8,6 +8,10 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 from mcp.server import Server
 import mcp.types as types
 
+from agents.aniseikonia_scaling_agent import AniseikoniaScalingAgent
+from agents.metamorphopsia_grid_remapper_agent import MetamorphopsiaGridRemapperAgent
+from agents.biofeedback_anxiety_sentinel_agent import BiofeedbackAnxietySentinelAgent
+
 # Use the native, core SSE transport layer which is always available
 from mcp.server.sse import SseServerTransport
 
@@ -20,6 +24,10 @@ mcp_server = Server(
     name="ocuguard-spatial",
     version="2.0.0"
 )
+
+calibration_agent = AniseikoniaScalingAgent()
+remapper_agent = MetamorphopsiaGridRemapperAgent()
+anxiety_agent = BiofeedbackAnxietySentinelAgent()
 
 @mcp_server.list_tools()
 async def handle_list_tools() -> List[types.Tool]:
@@ -85,6 +93,37 @@ async def handle_list_tools() -> List[types.Tool]:
                 },
                 "required": ["user_id", "input_string", "agent_mode", "pitch", "yaw"]
             }
+        ),
+        types.Tool(
+            name="ocuguard_calibrate_vision",
+            description=(
+                "Generate calibrated UI transformations for perceived size and text warping distortions, returning a safe scale factor and CSS warp matrix."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "visual_field_clearance": {"type": "number", "description": "Current visible field clearance ratio."},
+                    "perceived_size_delta": {"type": "number", "description": "Measured asymmetric perceived size delta."},
+                    "text_wavy_index": {"type": "number", "description": "Degree of text waviness perceived by the user."},
+                    "oem_platform": {"type": "string", "description": "Target OEM platform identifier."}
+                },
+                "required": ["visual_field_clearance", "perceived_size_delta", "text_wavy_index"]
+            }
+        ),
+        types.Tool(
+            name="ocuguard_triage_anxiety",
+            description=(
+                "Evaluate vocal stress and panic phrases to deliver empathetic reassurance grounded in 12-to-18 month neuroadaptation milestones."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "input_string": {"type": "string", "description": "Captured user transcript or anxiety phrase."},
+                    "vocal_stress_score": {"type": "number", "description": "Normalized vocal stress score from biofeedback sensors."},
+                    "oem_platform": {"type": "string", "description": "Target OEM platform identifier."}
+                },
+                "required": ["input_string", "vocal_stress_score"]
+            }
         )
     ]
 
@@ -95,16 +134,39 @@ async def handle_call_tool(
     """
     Route tool triggers straight down into the localized sub-agent evaluations.
     """
-    if name != "evaluate_wearable_stream" or not arguments:
+    if name not in ["evaluate_wearable_stream", "ocuguard_calibrate_vision", "ocuguard_triage_anxiety"] or not arguments:
         raise ValueError("Invalid parameters or unrecognized tool identifier passed to execution endpoint.")
 
     try:
-        from app import process_single_frame
-        response_payload = process_single_frame(arguments)
+        if name == "evaluate_wearable_stream":
+            from app import process_single_frame
+            response_payload = process_single_frame(arguments)
+            
+            status = response_payload.get("status", response_payload.get("data", {}).get("status", "URGENT"))
+            action = response_payload.get("action_required", response_payload.get("data", {}).get("action_required", ""))
+            reasoning = response_payload.get("reasoning", response_payload.get("data", {}).get("reasoning", ""))
         
-        status = response_payload.get("status", response_payload.get("data", {}).get("status", "URGENT"))
-        action = response_payload.get("action_required", response_payload.get("data", {}).get("action_required", ""))
-        reasoning = response_payload.get("reasoning", response_payload.get("data", {}).get("reasoning", ""))
+        elif name == "ocuguard_calibrate_vision":
+            # Directly call the appropriate agent based on inputs
+            if "perceived_size_delta" in arguments:
+                payload = calibration_agent.calibrate(arguments)
+            elif "text_wavy_index" in arguments:
+                payload = remapper_agent.remap(arguments)
+            else:
+                raise ValueError("Invalid arguments for ocuguard_calibrate_vision")
+            
+            status = payload.status
+            action = "Apply UI transformations as specified in the payload."
+            reasoning = payload.cognitive_reassurance_string
+
+        elif name == "ocuguard_triage_anxiety":
+            payload = anxiety_agent.evaluate(arguments)
+            status = payload.status
+            action = "Deliver cognitive reassurance and monitor vocal stress."
+            reasoning = payload.cognitive_reassurance_string
+
+        else:
+             raise ValueError(f"Tool '{name}' is not implemented in handle_call_tool.")
         
         output_text = (
             f"Status/Severity Ring: {status}\n"
@@ -182,6 +244,59 @@ async def process_stateless_jsonrpc(request: Request) -> JSONResponse:
             return JSONResponse({"jsonrpc": "2.0", "id": rpc_id, "result": {"prompts": []}})
         elif "triggers/list" in method:
             return JSONResponse({"jsonrpc": "2.0", "id": rpc_id, "result": {"triggers": [], "events": []}})
+        elif "tools/list" in method:
+            return JSONResponse({
+                "jsonrpc": "2.0",
+                "id": rpc_id,
+                "result": {
+                    "tools": [
+                        {
+                            "name": "evaluate_wearable_stream",
+                            "description": "Stateless edge middleware to optimize visual-to-acoustic layouts, evaluate triage keywords, and monitor orientation ergonomics on smart eyewear.",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "user_id": {"type": "string", "description": "The anonymized tracking UUID."},
+                                    "input_string": {"type": "string", "description": "The text payload to analyze."},
+                                    "agent_mode": {"type": "string", "description": "The specific sub-agent plugin mode."},
+                                    "pitch": {"type": "number", "description": "Horizontal X-axis tracking metric."},
+                                    "yaw": {"type": "number", "description": "Vertical Y-axis tracking metric."},
+                                    "multimodal_flags": {"type": "array", "items": {"type": "string"}, "description": "Optional background triggers."},
+                                    "history": {"type": "object", "description": "User risk preferences."}
+                                },
+                                "required": ["user_id", "input_string", "agent_mode", "pitch", "yaw"]
+                            }
+                        },
+                        {
+                            "name": "ocuguard_calibrate_vision",
+                            "description": "Generate calibrated UI transformations for perceived size and metamorphopsia by returning a safe scale factor and warp matrix.",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "visual_field_clearance": {"type": "number", "description": "Current visible field clearance ratio."},
+                                    "perceived_size_delta": {"type": "number", "description": "Measured asymmetric perceived size delta."},
+                                    "text_wavy_index": {"type": "number", "description": "Degree of text waviness perceived by the user."},
+                                    "oem_platform": {"type": "string", "description": "Target OEM platform identifier."}
+                                },
+                                "required": ["visual_field_clearance", "perceived_size_delta", "text_wavy_index"]
+                            }
+                        },
+                        {
+                            "name": "ocuguard_triage_anxiety",
+                            "description": "Evaluate vocal stress and panic phrases to deliver empathetic reassurance grounded in neuroadaptation milestones.",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "input_string": {"type": "string", "description": "Captured user transcript or anxiety phrase."},
+                                    "vocal_stress_score": {"type": "number", "description": "Normalized vocal stress score from biofeedback sensors."},
+                                    "oem_platform": {"type": "string", "description": "Target OEM platform identifier."}
+                                },
+                                "required": ["input_string", "vocal_stress_score"]
+                            }
+                        }
+                    ]
+                }
+            })
         elif "initialize" in method:
             return JSONResponse({
                 "jsonrpc": "2.0",

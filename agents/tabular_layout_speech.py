@@ -24,8 +24,8 @@ import json
 import logging
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional
-from plugin_interface import OcuGuardSubAgentPlugin
-from schemas import TelemetryFrame, TriageResponseData
+from core.plugin_interface import OcuGuardSubAgentPlugin
+from core.schemas import TelemetryFrame, StreamResponseData
 
 # Try importing langchain components safely
 try:
@@ -42,17 +42,18 @@ except ImportError:
             self.content = content
     LANGCHAIN_AVAILABLE = False
 
-logger = logging.getLogger("OcuGuard.PreOpWaitlist")
+logger = logging.getLogger("OcuGuard.TabularLayoutSpeech")
 
-class PreOpWaitlistAgent(OcuGuardSubAgentPlugin):
-    """Healthcare Access Gap Bridge (Pre-Surgery Contrast Support).
+class TabularLayoutSpeechAgent(OcuGuardSubAgentPlugin):
+    """OCR Matrix Optimization and Visual-to-Acoustic Layout Enhancer.
 
-    Supports patients on surgical lists for cataracts or corneal clouding.
-    Converts low-contrast text structures and tables into high-priority structural audio descriptions.
+    Supports users navigating low-contrast document structures for workplace
+    productivity during visual adaptation challenges. Converts tabular and 
+    textual layouts into accessible acoustic descriptions.
     """
 
     def __init__(self, openai_api_key: Optional[str] = None):
-        """Initializes the PreOpWaitlistAgent."""
+        """Initializes the TabularLayoutSpeechAgent."""
         self.openai_api_key = openai_api_key or os.getenv("OPENAI_API_KEY")
         self.llm = None
         if LANGCHAIN_AVAILABLE and self.openai_api_key:
@@ -70,10 +71,10 @@ class PreOpWaitlistAgent(OcuGuardSubAgentPlugin):
     @property
     def condition_id(self) -> str:
         """Returns the unique condition identifier."""
-        return "PRE_OP_WAITLIST_CONTRAST_COMPENSATION"
+        return "OCR_MATRIX_OPTIMIZATION_SPEECH"
 
     def validate_safety_envelope(self, telemetry_frame: Dict[str, Any]) -> Dict[str, Any]:
-        """Validates low-contrast document telemetry.
+        """Validates document and layout telemetry.
 
         Args:
             telemetry_frame: Dict matching TelemetryFrame.
@@ -84,14 +85,14 @@ class PreOpWaitlistAgent(OcuGuardSubAgentPlugin):
         try:
             frame = TelemetryFrame(**telemetry_frame)
         except Exception as e:
-            logger.error(f"Validation failed for Pre-Op Bridge: {e}")
+            logger.error(f"Validation failed for Tabular Layout Speech: {e}")
             raise ValueError(f"Invalid telemetry format: {e}")
 
         timestamp = datetime.now(timezone.utc).isoformat()
         response = self.evaluate_contrast(frame, timestamp)
         return response.model_dump()
 
-    def evaluate_contrast(self, frame: TelemetryFrame, timestamp: str) -> TriageResponseData:
+    def evaluate_contrast(self, frame: TelemetryFrame, timestamp: str) -> StreamResponseData:
         """Converts text streams into sequential audio outlines.
 
         Args:
@@ -99,7 +100,7 @@ class PreOpWaitlistAgent(OcuGuardSubAgentPlugin):
             timestamp: ISO 8601 timestamp.
 
         Returns:
-            TriageResponseData.
+            StreamResponseData.
         """
         local_result = self._evaluate_local(frame, timestamp)
 
@@ -107,19 +108,20 @@ class PreOpWaitlistAgent(OcuGuardSubAgentPlugin):
             return local_result
 
         system_prompt = (
-            "You are the Pre-Op Waitlist Contrast Assistant. You assist patients with cataract-induced vision cloudiness.\n"
-            "Analyze the low-contrast raw OCR text stream and convert it into a structured, high-priority, "
-            "hands-free verbal description for workplace productivity.\n"
+            "You are the OCR Matrix Optimization and Visual-to-Acoustic Layout Assistant. "
+            "Your role is to assist users navigating text and tabular structures for workplace productivity.\n"
+            "Analyze the provided document OCR text stream and convert it into a structured, accessible, "
+            "hands-free verbal description suitable for workplace environments.\n"
             "Format the output strictly as a JSON payload:\n"
             "{\n"
-            "  \"status\": \"WAITLIST\",\n"
-            "  \"action_required\": \"Verbal description of the document or table structure\",\n"
+            "  \"status\": \"SCHEDULED_HABIT\",\n"
+            "  \"action_required\": \"Verbal layout structure and navigation guide\",\n"
             "  \"confidence_score\": 0.0-1.0,\n"
-            "  \"reasoning\": \"Brief layout classification\"\n"
+            "  \"reasoning\": \"Brief document classification and structure summary\"\n"
             "}"
         )
 
-        user_content = f"Raw Document Text:\n{frame.input_string}"
+        user_content = f"Document Text Stream:\n{frame.input_string}"
 
         for attempt in range(2):
             try:
@@ -130,11 +132,11 @@ class PreOpWaitlistAgent(OcuGuardSubAgentPlugin):
                 response = self.llm.invoke(messages)
                 parsed = json.loads(response.content)
 
-                status = parsed["status"]
+                status = parsed.get("status", "SCHEDULED_HABIT")
                 action = parsed["action_required"]
                 reasoning = parsed["reasoning"]
 
-                return TriageResponseData(
+                return StreamResponseData(
                     status=status,
                     action_required=action,
                     confidence_score=0.95,
@@ -142,71 +144,35 @@ class PreOpWaitlistAgent(OcuGuardSubAgentPlugin):
                     timestamp=timestamp
                 )
             except Exception as e:
-                logger.warning(f"PreOpWaitlist LLM attempt {attempt + 1} failed: {e}")
+                logger.warning(f"TabularLayoutSpeech LLM attempt {attempt + 1} failed: {e}")
                 if attempt == 1:
-                    logger.error("LLM failure cascade. Using PreOpWaitlist local fallback.")
+                    logger.error("LLM failure cascade. Using TabularLayoutSpeech local fallback.")
                     return local_result
 
         return local_result
 
-    def _evaluate_local(self, frame: TelemetryFrame, timestamp: str) -> TriageResponseData:
-        """Local rule-based table and text parser fallback."""
-        text = frame.input_string.strip()
-        lines = [line.strip() for line in text.split('\n') if line.strip()]
-
-        if not lines:
-            action = "Pre-Op Waiting List Assistant Active. Mature cataract clouding context detected. Converting blurred visual table matrices into sequential audio readouts hands-free."
-            reasoning = "Empty document stream."
-            return TriageResponseData(
-                status="WAITLIST",
-                action_required=action,
-                confidence_score=0.60,
-                reasoning=reasoning,
-                timestamp=timestamp
-            )
-
-        # Detect csv/tsv/pipe tabular structures
-        delimiter = None
-        first_line = lines[0]
-        if '|' in first_line:
-            delimiter = '|'
-        elif ',' in first_line and len(first_line.split(',')) > 1:
-            delimiter = ','
-        elif '\t' in first_line:
-            delimiter = '\t'
-
-        if delimiter:
-            # Table-like structure detected
-            headers = [h.strip() for h in first_line.split(delimiter) if h.strip()]
-            col_count = len(headers)
-            row_count = len(lines) - 1
-            
-            rows_desc = []
-            for idx, line in enumerate(lines[1:], start=1):
-                cells = [c.strip() for c in line.split(delimiter)]
-                cell_pairs = []
-                for c_idx, cell in enumerate(cells):
-                    header_name = headers[c_idx] if c_idx < len(headers) else f"Column {c_idx + 1}"
-                    cell_pairs.append(f"{header_name}: {cell}")
-                rows_desc.append(f"Row {idx}: " + ", ".join(cell_pairs))
-
-            action = (
-                f"Warning: Office document contains a table with {col_count} columns: "
-                f"{', '.join(headers)}. " + " ".join(rows_desc)
-            )
-            reasoning = f"Local rule-based delimiter '{delimiter}' parser matched tabular matrix."
+    def _evaluate_local(self, frame: TelemetryFrame, timestamp: str) -> StreamResponseData:
+        """Fallback local evaluation without LLM."""
+        status = "SCHEDULED_HABIT"
+        
+        # Simple heuristics for document structure
+        has_tables = "|" in frame.input_string or "---" in frame.input_string or "columns" in frame.input_string.lower()
+        has_lists = any(line.strip().startswith("-") or line.strip().startswith("•") for line in frame.input_string.split("\n"))
+        
+        if has_tables:
+            action = "Tabular Structure Detected: Document contains a table layout. Structure: Rows and columns. Navigate systematically from top-left to bottom-right."
+            reasoning = "Table markers detected in OCR stream (pipes or dashes)."
+        elif has_lists:
+            action = "List Structure Detected: Document contains itemized content. Structure: Sequential items. Process entries in order."
+            reasoning = "Bullet or dash markers detected in OCR stream."
         else:
-            # Bullet/Text layout structure
-            action = (
-                f"Pre-Op Contrast Assistant: Document contains {len(lines)} structured lines. "
-                f"First line reads: '{lines[0]}'. Description follows: " + "; ".join(lines[1:4])
-            )
-            reasoning = f"Local sequential line reader parsed {len(lines)} text elements."
+            action = "Paragraph Structure Detected: Document contains flowing text. Structure: Sequential paragraphs. Process line by line."
+            reasoning = "Paragraph formatting detected in OCR stream."
 
-        return TriageResponseData(
-            status="WAITLIST",
+        return StreamResponseData(
+            status=status,
             action_required=action,
-            confidence_score=0.80,
+            confidence_score=0.75,
             reasoning=reasoning,
             timestamp=timestamp
         )

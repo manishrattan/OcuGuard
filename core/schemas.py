@@ -58,6 +58,11 @@ class TelemetryFrame(BaseModel):
     # Environmental metadata (ambient light intensity 0-100%, contrast level)
     ambient_light_intensity: Optional[float] = None
     contrast_adaptation_mode: Optional[str] = None  # "high_contrast", "standard", "low_contrast"
+    visual_field_clearance: float = 1.0
+    perceived_size_delta: float = 0.0
+    text_wavy_index: float = 0.0
+    vocal_stress_score: float = 0.0
+    oem_platform: Optional[str] = None
     
     # Router identification tokens
     client_id: Optional[str] = None
@@ -82,12 +87,19 @@ class StreamResponseData(BaseModel):
     post_op_recovery_guidance: Optional[PostOpRecoveryGuidance] = None
     pan_localization: Optional[float] = None
     platform_oem: Optional[str] = None  # Hardware vendor identifier
+    ui_transformations: Optional[Dict[str, Any]] = None
+    cognitive_reassurance_string: Optional[str] = None
     compliance_gate: Dict[str, str] = {
         "software_classification": "Assisted Orientation Aid (Non-Diagnostic Middleware)",
         "regulatory_disclaimer": "OcuGuard AI does not replace direct physician oversight or certified low-vision mobility coaching.",
         "fail_safe_status": "ACTIVE_LOCAL_OVERRIDE_ENABLED",
         "pii_anonymization_standard": "HIPAA/GDPR Compliant Stateless Edge Routing"
     }
+
+class OrchestratorPayload(BaseModel):
+    status: str
+    ui_transformations: Dict[str, Any]
+    cognitive_reassurance_string: str
 
 class AdaptivePayloadResponse(BaseModel):
     message: str

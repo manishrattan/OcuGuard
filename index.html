@@ -120,6 +120,9 @@
             <option value="ERGONOMIC_SCHEDULE">Ergonomic Schedule (Habit Monitoring)</option>
             <option value="AMBIENT_LUMINANCE">Ambient Luminance (Contrast Assist)</option>
             <option value="BE_MY_EYES">Be My Eyes (Acoustic Escalation Proxy)</option>
+            <option value="ANISEIKONIA_SCALING">Aniseikonia Scaling (Size Delta)</option>
+            <option value="METAMORPHOPSIA_GRID_REMAPPER">Metamorphopsia Remapper (Waviness)</option>
+            <option value="BIOFEEDBACK_ANXIETY_SENTINEL">Biofeedback Sentinel (Anxiety)</option>
           </select>
         </div>
 
@@ -214,6 +217,35 @@
           </div>
         </div>
 
+        <div id="panel_aniseikonia_scaling" class="agent-specific-panel">
+          <div class="panel-title">Aniseikonia Calibration Parameters</div>
+          <div class="control-block">
+            <div class="label-row"><span>Perceived Size Delta</span><span id="lbl_size_delta" class="value-tag">0.00</span></div>
+            <input id="param_size_delta" type="range" min="-0.5" max="0.5" value="0.0" step="0.01" />
+          </div>
+          <div class="control-block" style="margin-bottom: 0;">
+            <div class="label-row"><span>Visual Field Clearance</span><span id="lbl_field_clearance" class="value-tag">100%</span></div>
+            <input id="param_field_clearance" type="range" min="0" max="100" value="100" />
+          </div>
+        </div>
+
+        <div id="panel_metamorphopsia_remapper" class="agent-specific-panel">
+          <div class="panel-title">Metamorphopsia Grid Parameters</div>
+          <div class="control-block" style="margin-bottom: 0;">
+            <div class="label-row"><span>Text Wavy Index</span><span id="lbl_wavy_index" class="value-tag">0.0</span></div>
+            <input id="param_wavy_index" type="range" min="0.0" max="1.0" value="0.0" step="0.05" />
+          </div>
+        </div>
+
+        <div id="panel_biofeedback_sentinel" class="agent-specific-panel">
+          <div class="panel-title">Biofeedback Anxiety Parameters</div>
+          <div class="control-block" style="margin-bottom: 0;">
+            <div class="label-row"><span>Vocal Stress Score</span><span id="lbl_stress_score" class="value-tag">0.0</span></div>
+            <input id="param_stress_score" type="range" min="0.0" max="1.0" value="0.0" step="0.05" />
+          </div>
+        </div>
+
+
         <div class="btn-group">
           <button class="btn-macro" onclick="triggerMacro('orientation_alert')">Post-Op Hold Drift</button>
           <button class="btn-macro" onclick="triggerMacro('layout_ocr')">Tabular Matrix Analysis</button>
@@ -289,7 +321,10 @@
       blind_x: 0.0, blind_y: 0.1, blind_r: 0.25,
       gaze_x: -0.2, gaze_y: -0.1, target_x: 0.3, target_y: 0.2,
       obstacle_distance: 0.4, obstacle_bearing: 20,
-      help_request: "Need help reading blurred text grid",
+      help_request: "Need help reading blurred text grid", // Accessibility agents
+      visual_field_clearance: 1.0,
+      perceived_size_delta: 0.0,
+      text_wavy_index: 0.0, vocal_stress_score: 0.0,
       hold_duration: 0, ambient_light: 55, contrast_mode: "standard"
     };
 
@@ -318,6 +353,9 @@
       document.getElementById('panel_tabular_speech').style.display = (telemetry.agentMode === 'TABULAR_LAYOUT_SPEECH') ? 'block' : 'none';
       document.getElementById('panel_ergonomic_schedule').style.display = (telemetry.agentMode === 'ERGONOMIC_SCHEDULE') ? 'block' : 'none';
       document.getElementById('panel_ambient_luminance').style.display = (telemetry.agentMode === 'AMBIENT_LUMINANCE') ? 'block' : 'none';
+      document.getElementById('panel_aniseikonia_scaling').style.display = (telemetry.agentMode === 'ANISEIKONIA_SCALING') ? 'block' : 'none';
+      document.getElementById('panel_metamorphopsia_remapper').style.display = (telemetry.agentMode === 'METAMORPHOPSIA_GRID_REMAPPER') ? 'block' : 'none';
+      document.getElementById('panel_biofeedback_sentinel').style.display = (telemetry.agentMode === 'BIOFEEDBACK_ANXIETY_SENTINEL') ? 'block' : 'none';
     }
 
     function triggerVoiceAlertSynthesis(sentence) {
@@ -409,6 +447,10 @@
           gaze_y: parseFloat(telemetry.gaze_y),
           target_x: parseFloat(telemetry.target_x),
           target_y: parseFloat(telemetry.target_y),
+          visual_field_clearance: parseFloat(telemetry.visual_field_clearance),
+          perceived_size_delta: parseFloat(telemetry.perceived_size_delta),
+          text_wavy_index: parseFloat(telemetry.text_wavy_index),
+          vocal_stress_score: parseFloat(telemetry.vocal_stress_score),
           blind_x: parseFloat(telemetry.blind_x),
           blind_y: parseFloat(telemetry.blind_y),
           blind_r: parseFloat(telemetry.blind_r),
@@ -535,6 +577,30 @@
             status = "SAFE";
             prompt = "System Status: Confidence within safe parameters. Monitoring for user support requests.";
           }
+        } else if (telemetry.agentMode === "ANISEIKONIA_SCALING") {
+            outAgent.textContent = "PLUGIN // ANISEIKONIA_SCALING";
+            const isWarn = Math.abs(telemetry.perceived_size_delta) > 0.15;
+            status = isWarn ? "ELEVATED_ALERT" : "SAFE";
+            prompt = isWarn 
+                ? "Applying a calibrated inverse scale factor to preserve fusion comfort while you track through the display field."
+                : "Visual calibration is stable. The display matrix is adjusting to preserve your fusion loop.";
+        } else if (telemetry.agentMode === "METAMORPHOPSIA_GRID_REMAPPER") {
+            outAgent.textContent = "PLUGIN // METAMORPHOPSIA_GRID_REMAPPER";
+            const isWarn = telemetry.text_wavy_index > 0.1;
+            status = isWarn ? "ELEVATED_ALERT" : "SAFE";
+            prompt = isWarn
+                ? "Applying a geometric warp transform to counteract perceived text waviness and stabilize the visual field."
+                : "Text geometry is stable. The display matrix is maintaining a linear text grid.";
+        } else if (telemetry.agentMode === "BIOFEEDBACK_ANXIETY_SENTINEL") {
+            outAgent.textContent = "PLUGIN // BIOFEEDBACK_ANXIETY_SENTINEL";
+            const hasPanicPhrase = ["wavy lines", "will i be okay", "panicking"].some(p => telemetry.transcript.toLowerCase().includes(p));
+            const isWarn = telemetry.vocal_stress_score >= 0.8 || hasPanicPhrase;
+            status = isWarn ? "ELEVATED_ALERT" : "SAFE";
+            prompt = isWarn
+                ? "Signal indicates heightened stress during the neuroadaptation phase. Breathe slowly and allow cortical fusion pathways to settle."
+                : "Your visual system is within stable adaptation bounds. Continue gradual reconditioning.";
+        } else {
+            outAgent.textContent = "UNBOUNDED_NODE";
         }
 
         outPrompt.textContent = prompt;
@@ -690,6 +756,10 @@
     document.getElementById('param_obstacle_bearing').addEventListener('input', (e) => { telemetry.obstacle_bearing = parseInt(e.target.value); document.getElementById('lbl_obstacle_bearing').textContent = `${telemetry.obstacle_bearing}°`; processAgentOrchestrator(); });
     document.getElementById('param_hold_duration').addEventListener('input', (e) => { telemetry.hold_duration = parseInt(e.target.value); document.getElementById('lbl_hold_duration').textContent = `${telemetry.hold_duration}s`; processAgentOrchestrator(); });
     document.getElementById('param_ambient_light').addEventListener('input', (e) => { telemetry.ambient_light = parseInt(e.target.value); document.getElementById('lbl_ambient_light').textContent = `${telemetry.ambient_light}%`; processAgentOrchestrator(); });
+    document.getElementById('param_size_delta').addEventListener('input', (e) => { telemetry.perceived_size_delta = parseFloat(e.target.value); document.getElementById('lbl_size_delta').textContent = telemetry.perceived_size_delta.toFixed(2); processAgentOrchestrator(); });
+    document.getElementById('param_field_clearance').addEventListener('input', (e) => { telemetry.visual_field_clearance = parseInt(e.target.value) / 100; document.getElementById('lbl_field_clearance').textContent = `${e.target.value}%`; processAgentOrchestrator(); });
+    document.getElementById('param_wavy_index').addEventListener('input', (e) => { telemetry.text_wavy_index = parseFloat(e.target.value); document.getElementById('lbl_wavy_index').textContent = telemetry.text_wavy_index.toFixed(1); processAgentOrchestrator(); });
+    document.getElementById('param_stress_score').addEventListener('input', (e) => { telemetry.vocal_stress_score = parseFloat(e.target.value); document.getElementById('lbl_stress_score').textContent = telemetry.vocal_stress_score.toFixed(1); processAgentOrchestrator(); });
     document.getElementById('param_contrast_mode').addEventListener('change', (e) => { telemetry.contrast_mode = e.target.value; processAgentOrchestrator(); });
     document.getElementById('param_help_request').addEventListener('change', (e) => { telemetry.help_request = e.target.value; processAgentOrchestrator(); });
     

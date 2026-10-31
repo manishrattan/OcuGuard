@@ -1,175 +1,191 @@
-# OcuGuard AI Enterprise — Adaptive Spatial Computing Middleware
+# OcuGuard: Smart-Eyewear Accessibility Prototype
 
-OcuGuard AI is an open-source, stateless spatial computing and ergonomic telemetry pipeline engineered for consumer smart eyewear (such as Meta Orion, Apple Vision, and Google Ambient systems). The system acts as a high-frequency orientation translator, transforming raw inertial sensor matrices (IMU data) and OCR transcripts into localized audio-haptic cues to maximize user workplace productivity and spatial navigation adherence.
+OcuGuard is an open-source prototype for processing user-supplied text and telemetry and returning accessibility-oriented cues. It contains a Flask REST API, a FastAPI MCP/SSE server, a browser-based simulator, and agent modules for visual layout, orientation, and environment experiments.
 
----
-
-## 💡 Project Genesis & Hackathon Focus
-
-OcuGuard AI was inspired by a technical contributor’s personal journey navigating visual adaptation challenges following a complex ophthalmic recovery process. During high-stakes situational intervals (such as strict posture constraints or lengthy community waitlists), mass-market consumer wearables remain entirely passive—requiring explicit user triggers to react. 
-
-OcuGuard AI closes this structural gap. It acts as an autonomous background framework that maps live orientation streams against user-calibrated baseline goals, ensuring consumer wearables can actively assist individuals during critical physical adaptation windows.
+**Status: prototype/demo only.** This repository does not currently integrate with Meta glasses or another manufacturer SDK, capture camera or microphone streams from a wearable, render output on eyewear, or establish a live human-helper connection. Inputs are supplied to its APIs or simulator; do not describe the project as an operational wearable product.
 
 ---
 
-## 🛠️ Network Architecture & Multi-Agent Mesh
+## Purpose and scope
+
+The project explores how user-supplied visual and orientation metrics might be transformed into accessible text, layout, and environmental cues. It is an engineering prototype intended for simulation and experimentation, not a validated solution for post-operative recovery or other medical needs.
+
+The current repository does not establish a connection to live wearable sensors or prove that its outputs improve safety, accessibility, or productivity. Hardware integration and any patient-facing use would require separate implementation, testing, and expert review.
+
+---
+
+## Current Architecture and Data Flow
 
 The system orchestrates stream data across an extensible, decoupled plugin architecture:
 
 ```mermaid
 flowchart LR
-    U[User Wearable Stream<br/>Orientation / Audio Data]
-    API[REST Evaluation Gateway<br/>/v1/stream/evaluate]
-    SUP[Supervisor Agent<br/>Stateless PII Redaction]
-    ES[Eye Sentinel Agent]
-    GC[Gaze Compass Agent]
-    TL[Tabular Layout Agent]
-    ER[Ergonomic Schedule Agent]
-    AL[Ambient Luminance Agent]
-    BME[Be My Eyes Proxy Node]
-    
-    LLM[OpenAI GPT Cloud Path]
-    LOCAL[Deterministic Math Engine]
+    U["Developer, simulator, or API client<br/>supplies text and telemetry"]
+    REST["Flask REST API<br/>app.py"]
+    SUP["SupervisorAgent<br/>limited token checks and regex redaction"]
+    ROUTER{"agent_mode router"}
+    AGENTS["Ten REST modes<br/>orientation, gaze, layout,<br/>environment, and transforms"]
+    RESP["REST response<br/>status and data"]
+    MCP["FastAPI MCP/SSE server<br/>mcp_sse_server.py"]
+    FRAME["evaluate_wearable_stream<br/>calls the REST frame processor"]
+    TOOLS["Direct MCP tools<br/>vision calibration and anxiety"]
+    SIM["Static browser simulator<br/>serve.py"]
+    LLM["External LLM path<br/>used by selected agents"]
+    LOCAL["Local rule/math paths<br/>used by selected agents"]
 
-    U --> API
-    API --> SUP
-    SUP --> |"EYE_SENTINEL"| ES
-    SUP --> |"GAZE_COMPASS"| GC
-    SUP --> |"TABULAR_LAYOUT_SPEECH"| TL
-    SUP --> |"ERGONOMIC_SCHEDULE"| ER
-    SUP --> |"AMBIENT_LUMINANCE"| AL
-    SUP --> |"BE_MY_EYES"| BME
+    U --> REST --> SUP --> ROUTER --> AGENTS --> RESP
+    MCP --> FRAME --> SUP
+    MCP --> TOOLS
+    AGENTS --> LLM
+    AGENTS --> LOCAL
+    SIM -. "manual demo inputs" .-> U
+```
 
-    ES & GC & TL & BME --> LLM
-    ER & AL --> LOCAL
+The diagram describes code paths, not safety certification or real-time sensor integration. Some agents use external model calls; others use local rules or calculations. Do not assume every mode is offline or that all failures have a safe fallback.
 
-### Active Core Plugins
-1. Supervisor Agent (SupervisorAgent): The operational firewall. Enforces stateless edge boundaries, scrubs PII via high-speed regex tracking, and triggers immediate fallback mechanics during network drops.
+### Agent modules
+1. Supervisor Agent (`SupervisorAgent`): Shared REST ingestion and routing code. It performs limited token checks and regex redaction; it is not comprehensive privacy protection or an authentication layer.
 
-2. Eye Sentinel Agent (EyeSentinelAgent): Tracks strict, high-frequency orientation boundaries. If a user's head pitch drifts from a configured threshold, it dispatches rapid structural remediation guidelines.
+2. Eye Sentinel Agent (`EyeSentinelAgent`): Keyword-based symptom and positioning response path with local and cloud-backed branches; not clinically validated.
 
-3. Gaze Compass Agent (GazeCompassAgent): Visual workspace layout tool. Continuously tracks coordinate matrices, mapping central scotomas relative to target vectors to yield real-time 3D stereo-panning cues to shift items into the Preferred Retinal Locus (PRL).
+3. Gaze Compass Agent (`GazeCompassAgent`): Computes low-vision alignment cues from supplied target and blind-spot coordinates; it does not track objects from a glasses camera.
 
-4. Tabular Layout Speech Agent (TabularLayoutSpeechAgent): Productivity enhancer. Translates messy OCR text or document tables into structured, hands-free verbal layouts for users dealing with blurry visual profiles.
+4. Tabular Layout Speech Agent (`TabularLayoutSpeechAgent`): Converts supplied text/layout content into an audio-oriented outline; it does not capture OCR from a wearable.
 
-5. Ergonomic Schedule Agent (ErgonomicScheduleAgent): Passive tracking engine that uses time-series telemetry to detect sustained, frozen postural shapes, prompting movement cues.
+5. Ergonomic Schedule Agent (`ErgonomicScheduleAgent`): Evaluates supplied posture-hold telemetry and returns wellness-oriented prompts.
 
-6. Ambient Luminance Agent (AmbientLuminanceAgent): Contrast assessment tool evaluating ambient lux environments to prompt electronic glass tint adaptations or high-contrast screen profiles.
+6. Ambient Luminance Agent (`AmbientLuminanceAgent`): Evaluates supplied ambient-light and contrast values and returns suggestions; no lens tint integration is present.
 
-7. Be My Eyes Escalation Agent (BeMyEyesAgent): High-reliability proxy that bridges to a live human helper if AI frame processing confidence slips below 82%.
+7. Be My Eyes Agent (`BeMyEyesAgent`): Evaluates input through a local/cloud agent path. A live Be My Eyes connection is not implemented here.
 
-### ⚖️ Strict Product Boundaries & Liability Notice
-OcuGuard AI is classified strictly as an abstract cognitive assistive framework and non-diagnostic orientation aid.
+8. **Aniseikonia Scaling Agent**: Produces a text scale factor and transformation matrix from supplied size-difference metrics.
 
-NOT A MEDICAL DEVICE: This software does NOT provide medical triage, diagnostic evaluations, or medical treatment plans. It has NOT been reviewed, cleared, or approved by the FDA or any global regulatory body.
+9. **Metamorphopsia Grid Remapper Agent**: Produces a simplified warp matrix from a supplied waviness index.
 
-USER-CONFIGURED PARAMETERS: All orientation limits, sensor guidelines, and alert baselines are configured manually by the operator to align with personal ergonomic preferences.
+10. **Biofeedback Anxiety Sentinel Agent**: Matches transcript phrases and stress scores and returns reassurance text; it is not a clinical assessment.
 
-NO WARRANTY: Provided under the open-source MIT License "AS IS". Users deploy this stream processing framework completely at their own risk.
+The descriptions above summarize code modules, not connected hardware features. In particular, Gaze Compass works from coordinates supplied in telemetry; it does not continuously track objects from a glasses camera.
 
-### 🚀 Getting Started
-Quick Start (Local Demo Dashboard)
-You don't need smart glasses to test or present this project. OcuGuard includes a high-fidelity web-based hardware simulator.
+The REST router currently recognizes these ten `agent_mode` values: `EYE_SENTINEL`, `OCUGUARD_CORE`, `GAZE_COMPASS`, `TABULAR_LAYOUT_SPEECH`, `ERGONOMIC_SCHEDULE`, `AMBIENT_LUMINANCE`, `BE_MY_EYES`, `ANISEIKONIA_SCALING`, `METAMORPHOPSIA_GRID_REMAPPER`, and `BIOFEEDBACK_ANXIETY_SENTINEL`. `SupervisorAgent` is a shared routing component, not a mode. `PreOpWaitlistAgent` is present in source but is not routed; `PRE_OP_BRIDGE` is advertised by the MCP schema but is not implemented by the REST router. The MCP mode enum omits the three newer REST modes.
+
+### Safety, Privacy, and Intended Use
+This project is a software prototype. This README does not determine the product's regulatory classification.
+
+Do not use the software for diagnosis, triage, treatment, emergency response, or post-operative positioning, or to make care decisions or delay contacting a qualified clinician or emergency service.
+
+The API accepts health-related content. This repository does not establish production-grade consent, authentication, encryption, retention, or privacy controls. Do not send real patient data or identifiable transcripts to a demo deployment.
+
+A disclaimer or open-source license does not determine regulatory status or eliminate legal obligations. Obtain jurisdiction-specific clinical, privacy, security, and regulatory review before any patient-facing use. No Meta, Apple, Google, or Be My Eyes partnership or endorsement is implied.
+
+## Quick start
+
+### Static simulator
+
+The browser simulator serves local static files. It does not connect to smart glasses or capture camera/microphone streams.
 
 1. Clone this repository and navigate to the project directory.
 
 2. Spin up the localized application daemon:
-python serve.py
-
-3. Open http://localhost:8000/index.html in your browser to interactively manipulate the 3D head-pitch metrics and gaze scotoma matrix vectors.
-
-### Running the Production REST API Backend
-Ensure Python 3.10+ is installed. Clone the workspace, copy environment parameters, and install dependencies:
-
-copy .env.example .env
-# Set your OPENAI_API_KEY and API_KEY in .env
-
-python -m pip install -r requirements.txt
-python app_2.py
-
-The endpoint will actively stream, validate, and serialize payload data at: POST /v1/stream/evaluate.
-
-### Running Automated Test Suites
-Verify all 36 local mathematical evaluation routines completely offline using mocked responses:
-
-pytest test_triage_agent.py -q
-
-
-
-
-### How it works
-
-- Clients send telemetry and agent mode selection to `POST /v1/triage`.
-- `app.py` validates requests, enforces rate limiting, and delegates to `SupervisorAgent`.
-- The supervisor redacts sensitive data and routes each request to the selected sub-agent.
-- Most agents use an LLM analysis path with secure OpenAI integration and a local fallback for safety.
-- `OCUGUARD_CORE` uses deterministic local rules and posture checks.
-- Results are returned as a structured `TriageResponse`, including confidence, action guidance, and escalation triggers.
-
----
-
-## 2. API Schema Specification
-
-### 2.1 Single Telemetry Analysis
-* **Endpoint:** `POST /v1/triage`
-* **Request Body:**
-  ```json
-  {
-    "user_id": "patient_uuid",
-    "input_string": "I see a black curtain in my left eye",
-    "agent_mode": "EYE_SENTINEL",
-    "client_id": "OCUGUARD_CLIENT",
-    "user_token": "OCUGUARD_TOKEN",
-    "history": {
-      "cataract_surgery": true,
-      "age_over_50": true
-    }
-  }
-  ```
-* **Supported `agent_mode` Values:** `EYE_SENTINEL`, `OCUGUARD_CORE`, `GAZE_COMPASS`, `PRE_OP_BRIDGE`, `BE_MY_EYES`
-
-### 2.2 Batch Telemetry Analysis
-* **Endpoint:** `POST /v1/triage/batch`
-* **Request Body:** Contains an array of requests under `{"requests": [...]}`. Max batch size is 10.
-
-### 2.3 Service Info & Health Checks
-* **Endpoint:** `GET /v1/triage/info` - Service details and supported keywords.
-* **Endpoint:** `GET /health` - Returns `{"status": "healthy"}` for load balancers.
-* **Protected Endpoints:** `/v1/system/config` and `/v1/system/stats` require the `X-API-Key` header matching the `API_KEY` environment variable.
-
----
-
-## 3. Getting Started
-
-### 3.1 Installation & Dependencies
-Ensure Python 3.10+ is installed. Clone the workspace, copy environment parameters, and install dependencies:
 ```bash
-copy .env.example .env
-# Set your OPENAI_API_KEY and API_KEY in .env
+python serve.py
+```
 
+3. Open [http://localhost:8000/index.html](http://localhost:8000/index.html) to try the simulated controls.
+
+### Start the APIs
+
+Use Python 3.10 or newer. Install dependencies:
+
+```bash
 python -m pip install -r requirements.txt
 ```
 
-### 3.2 Running the REST Daemon
-Start the Flask application:
+Optionally copy `.env.example` to `.env` and configure the required credentials for any external integrations. Never commit secrets.
+
+Start each server in a separate terminal:
+
 ```bash
+# REST API at http://localhost:5000
 python app.py
 ```
-By default, the server runs on `http://localhost:5000`.
 
-### 3.3 Running Automated Tests
-Run the comprehensive test suite with 36 unit tests:
 ```bash
-pytest test_triage_agent.py -q
+# MCP/SSE server at http://localhost:3000
+python mcp_sse_server.py
 ```
-All tests are configured to run completely offline using mocked LLM responses.
 
-### 🤝 Contributing & Hackathons
-This repository is optimized for open-source presentation at Accessibility Hackathons, Ophthalmic Innovation Summits, and Assistive Tech Forums. We welcome community contributions to build out this non-diagnostic framework!
+Both servers bind to all interfaces by default. Keep them on a trusted development environment; do not expose them publicly as-is.
 
-# How to Help:
-- Plugin Expansion: Build custom agents inheriting from OcuGuardSubAgentPlugin to map new wearable sensor profiles.
-- Telemetry Simulation: Enhance our WebGL/Canvas spatial visualizers to simulate diverse environmental conditions.
-- Audio Engineering: Implement Web Audio API extensions to refine real-time stereo pan-localization velocity.
+### Running Automated Test Suites
+The existing test module is a starting point, not a verified release baseline. Some API tests reference older `/v1/triage*` routes, while the current Flask app exposes `/v1/stream/*`; reconcile those tests before relying on their results. Pytest is not currently declared in the project dependencies.
 
-Feel free to open an issue or discussion thread to get involved. Let's make smart eyewear actively helpful together!
+```bash
+python -m pip install pytest
+python -m pytest -q tests
+```
+
+See the [unit and integration test strategy](AGENTS.md#testing-strategy) for the planned coverage and known gaps.
+
+## Repository layout
+
+```text
+agents/                 Agent implementations
+core/                   Shared schemas and plugin interfaces
+docs/                   Specification, contributor guide, architecture
+integrations/oem/        OEM adapter contract; no vendor SDK adapters yet
+tests/                  Unit and API tests
+app.py                  Flask REST entry point
+mcp_sse_server.py       MCP/SSE entry point
+mcp_agent_server.py     MCP stdio entry point
+serve.py                Static simulator
+```
+
+Future manufacturer-specific adapters belong under `integrations/oem/`. The vendor-neutral `OEMTelemetryAdapter` contract maps SDK frames into `core.schemas.TelemetryFrame`; it does not implement or imply a Meta or other OEM integration. See the [OEM integration notes](integrations/oem/README.md) and [architecture guide](docs/architecture.md).
+
+## API overview
+
+### Flask REST API
+
+| Route | Purpose |
+|---|---|
+| `GET /health` | Basic process health response. |
+| `GET /v1/stream/info` | Service metadata and a supported-agent list; the current list omits newer routed modes, so consult the mode list below. |
+| `POST /v1/stream/evaluate` | Validates and routes a single telemetry frame. |
+| `POST /v1/stream/evaluate/batch` | Evaluates up to 10 frames. |
+| `GET /v1/system/config` | Configuration endpoint protected by `X-API-Key` when `API_KEY` is configured. |
+| `GET /v1/system/stats` | Aggregate statistics endpoint protected by `X-API-Key` when `API_KEY` is configured. |
+
+`POST /v1/stream/evaluate` requires `user_id` and `input_string`; `agent_mode` defaults to `EYE_SENTINEL`. The ten implemented modes are `EYE_SENTINEL`, `OCUGUARD_CORE`, `GAZE_COMPASS`, `TABULAR_LAYOUT_SPEECH`, `ERGONOMIC_SCHEDULE`, `AMBIENT_LUMINANCE`, `BE_MY_EYES`, `ANISEIKONIA_SCALING`, `METAMORPHOPSIA_GRID_REMAPPER`, and `BIOFEEDBACK_ANXIETY_SENTINEL`.
+
+### MCP tools
+
+| Tool | Inputs | Current limitation |
+|---|---|---|
+| `evaluate_wearable_stream` | Frame fields including `user_id`, `input_string`, `agent_mode`, `pitch`, and `yaw`. | MCP schema's mode enum is incomplete: it advertises `PRE_OP_BRIDGE` but omits three REST modes. |
+| `ocuguard_calibrate_vision` | `visual_field_clearance`, `perceived_size_delta`, `text_wavy_index`. | The schema requires both calibration metrics, but the handler chooses one agent based on the presence of `perceived_size_delta`; the remapping branch is therefore not reachable with a schema-valid call. The handler currently returns text, not the documented structured transform payload. |
+| `ocuguard_triage_anxiety` | `input_string`, `vocal_stress_score`. | Returns plain text status/reassurance; it is not medical triage or a clinical assessment. |
+
+The MCP handlers currently format results as text rather than returning a typed structured payload. Validate the server's discovery and session behavior against the MCP clients you intend to support; the stateless compatibility routes do not implement every MCP method.
+
+---
+
+## Request paths and limitations
+
+1. **Flask REST (`app.py`):** `/v1/stream/evaluate` validates the frame, passes it through `SupervisorAgent`, and selects a handler by `agent_mode`. Some modes use an external LLM path; behavior depends on the selected agent and fallback.
+2. **MCP/SSE (`mcp_sse_server.py`):** `evaluate_wearable_stream` calls the REST frame processor. The two direct tools call their agent modules directly and bypass the REST supervisor path. The current implementation returns text content from tool calls, not the structured payload described by some older docs.
+3. **MCP stdio (`mcp_agent_server.py`):** Provides a separate stdio transport for MCP clients.
+4. **Static simulator (`serve.py`):** Serves the local browser files. It does not provide a glasses SDK or itself stream sensor data to either API.
+
+These are separate processes. Do not assume network failures always fall back locally, that all calls are stateless, or that API/MCP results are suitable for patient care.
+
+---
+
+## Contributing
+Contributions are welcome. Keep pull requests aligned with the prototype's documented scope, avoid implying clinical or hardware capabilities that are not implemented, and include tests for behavior changes.
+
+### How to help
+- Test coverage: Add deterministic unit tests and REST/MCP integration tests; see [AGENTS.md](AGENTS.md#testing-strategy).
+- Simulator: Improve the browser demo and clearly label simulated data and limitations.
+- Integrations: Propose device or audio integrations only against a documented, approved platform API, with user consent and a safe disable path.
+
+Open an issue or discussion to propose a change.

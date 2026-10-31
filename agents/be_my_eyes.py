@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 
 # Core internal plugin and schema types
-from plugin_interface import OcuGuardSubAgentPlugin
-from schemas import TelemetryFrame, StreamResponseData
+from core.plugin_interface import OcuGuardSubAgentPlugin
+from core.schemas import TelemetryFrame, StreamResponseData
 
 # Explicit structural interface classes cleanly decoupled to preserve type tracking
 class FallbackMessage:

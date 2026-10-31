@@ -1,0 +1,16 @@
+.git/
+.azure/
+.venv/
+venv/
+__pycache__/
+**/__pycache__/
+.pytest_cache/
+**/.pytest_cache/
+tests/
+docs/
+.env
+.env.*
+!.env.example
+*.py[cod]
+test-output.xml
+pytest_log.txt

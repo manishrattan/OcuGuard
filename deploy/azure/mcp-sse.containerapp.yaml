@@ -1,0 +1,29 @@
+properties:
+  configuration:
+    activeRevisionsMode: Single
+    ingress:
+      external: false
+      allowInsecure: false
+      targetPort: 3000
+      transport: http
+  template:
+    containers:
+      - name: ocuguard-mcp
+        image: REPLACE_WITH_PULLABLE_IMAGE
+        command:
+          - python
+        args:
+          - mcp_sse_server.py
+        resources:
+          cpu: 0.5
+          memory: 1Gi
+        probes:
+          - type: Liveness
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+    scale:
+      minReplicas: 1
+      maxReplicas: 1
