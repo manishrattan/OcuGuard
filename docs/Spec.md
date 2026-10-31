@@ -4,13 +4,21 @@
 >
 > This document separates what the repository does today from ideas that would need design, evidence, and review before becoming a product. Names used by existing code are not claims about clinical capability.
 
-[Start here](../README.md) · [Contributing and hackathon guide](./contributing.md) · [Architecture](./architecture.md)
+[Start here](../README.md) · [Contributing and hackathon guide](./contributing.md) · [Architecture](./architecture.md) · [Wearable action plan](./wearable-integration-action-plan.md)
+
+## Origin and proposed purpose
+
+The project was prompted by a friend's personal experience after retinal-detachment surgery: their doctor gave them a specific instruction about limiting head movement. This is a useful reason to explore recovery support, not a universal rule. Post-surgical instructions depend on the procedure and the individual; the treating care team is the source of truth.
+
+> **Proposed north star:** Explore a patient-controlled recovery companion that makes care-team instructions easier to access and remember, while offering optional, non-clinical encouragement. OcuGuard must not create, interpret, change, or replace medical instructions.
+
+The first research scope should be a clearly defined group with a specific care-team-provided instruction, not "anyone struggling." Start with a non-sensing concept: faithfully present the person's existing instruction, let them choose reminders, and offer optional supportive messages. A future OEM device might provide an approved display or input surface. Sensor-based posture monitoring or feedback requires a separate feasibility, safety, and evidence review.
 
 ## The opportunity
 
-Temporary or ongoing vision changes can make everyday digital information harder to use. OcuGuard is a place for developers, accessibility advocates, designers, researchers, and people with lived experience to prototype **user-controlled ways of presenting information**—for example, clearer text structure, configurable contrast, or simulated orientation cues.
+People may find it difficult to access instructions or stay emotionally supported during recovery, especially when temporary vision changes or device accessibility needs are involved. OcuGuard can explore user-controlled ways to present information and reminders, while involving people with lived experience and appropriate care professionals in deciding whether those features are useful.
 
-The current project is a software sandbox: inputs are supplied by a caller or the browser simulator. It does not read glasses cameras, connect to a manufacturer SDK, or prove that any cue is effective or safe. The best contributions make the prototype more accessible, testable, understandable, and honest about its limits.
+The current repository is a software sandbox: inputs are supplied by a caller or simulator. It does not read glasses cameras, connect to a manufacturer SDK, manage a clinician-authored recovery plan, send patient reminders, or provide reviewed emotional support. It does not prove that any cue is effective or safe.
 
 ## Product principles
 
@@ -19,15 +27,30 @@ The current project is a software sandbox: inputs are supplied by a caller or th
 3. **Be clear about uncertainty:** Show the source and limits of an output. A heuristic or model response is not a verified fact.
 4. **Minimize data:** Prefer synthetic examples, collect only what a feature needs, and make external data flows visible.
 5. **Graceful failure:** Explain unavailable or invalid results. Do not silently convert errors into reassuring or safety-critical guidance.
-6. **No unsupported care claims:** Do not present this prototype as a diagnostic, treatment, emergency, or post-operative guidance system.
+6. **No generated care instructions:** The prototype is not a diagnostic, treatment, emergency, or post-operative guidance system. A future reminder feature may only present content supplied or confirmed by the user's care team; an agent must never invent or modify a restriction.
+
+## Bounded agent roles for a future recovery companion
+
+The word "agentic" should mean coordinating a user-approved experience, not delegating care decisions to autonomous software.
+
+| Proposed role | Allowed responsibility | Not allowed |
+|---|---|---|
+| Instruction presenter | Display the approved instruction, its source, and any user-confirmed schedule. | Interpret a procedure, generate positioning advice, or silently rewrite care-team wording. |
+| Reminder coordinator | Deliver user-configured reminders and support pause, snooze, and stop controls. | Treat an unanswered reminder as non-compliance or a medical status. |
+| Encouragement companion | Offer optional, reviewed, non-clinical supportive language. | Provide therapy, assess mental health, or reassure a user that a symptom is safe. |
+| Wearable adapter | Expose connection, permission, and signal availability for an officially supported device. | Decide what a patient should do or imply that an OEM validates OcuGuard's advice. |
+| Human-support option | Offer a user-selected contact path after explicit confirmation. | Claim to open an automatic clinician or helper connection. |
+
+These are future design boundaries, not capabilities implemented by the current ten REST modes. The existing mode catalog is a set of technical experiments and should not be marketed as a ready-made post-surgery agent suite.
 
 ## Current state at a glance
 
 | Area | In the repository today | Not implemented or not established |
 |---|---|---|
-| Inputs | JSON telemetry frames and manual simulator input | Live wearable camera, microphone, or sensor capture |
+| Inputs | JSON telemetry frames, manual browser input, and Streamlit synthetic presets/sliders plus a draggable glasses illustration for pitch, roll, and yaw | Live wearable camera, microphone, or sensor capture |
 | Processing | Flask REST routing, agent modules, and an MCP server | Validated real-time wearable pipeline |
 | Outputs | Text, status fields, and experimental layout/alignment data | Verified audio delivery or display rendering on glasses |
+| Recovery support | Synthetic input processing only | Care-team-authored plan, reminder scheduler, or reviewed encouragement experience |
 | Integrations | Vendor-neutral OEM adapter contract | Meta or other manufacturer SDK adapter or partnership |
 | Human support | A `BE_MY_EYES` mode that processes supplied data | A live Be My Eyes connection or automatic helper handoff |
 | Safety and privacy | Some validation, token checks, and text redaction in parts of the request path | Comprehensive security, consent, privacy, clinical validation, or regulatory review |
@@ -114,6 +137,7 @@ The optional API key does **not** protect the evaluation routes or the MCP servi
 - `mcp_sse_server.py` exposes an MCP server using legacy SSE transport. The current tool schemas and result formats have known gaps; validate against the intended MCP client.
 - `mcp_agent_server.py` is a separate stdio MCP entry point.
 - `serve.py` serves a static browser simulator. It does not stream data from eyewear.
+- `ui/streamlit_app.py` is an optional REST-connected demo console. Its moving-glasses graphic follows synthetic pitch, roll, and yaw sliders; dragging the illustration locally shows green/red for the OcuGuard Core demo threshold but does not update API inputs. The UI identifies the selected agent and offers a catalog of all ten prototype modes and their input-based strengths. Agent results and round-trip timing update after a frame is submitted. Its optional, nonverbal sound cue responds only to selected backend status labels and is not a patient alert.
 
 See the root [README](../README.md) for setup details and the [architecture guide](./architecture.md) for repository boundaries.
 

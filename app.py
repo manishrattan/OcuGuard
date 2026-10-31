@@ -160,21 +160,33 @@ def process_single_frame(frame_data: Dict[str, Any]) -> Dict[str, Any]:
             response_data = eye_sentinel.evaluate_triage(redacted_frame, timestamp)
             
     elif agent_mode == "OCUGUARD_CORE":
-        # Kinematics / posture alignment parameter enforcer
+        # Apply demo thresholds without presenting them as patient guidance.
         status = "SAFE"
-        action = "All anterior segment vector paths reporting stable alignment indices."
+        action = (
+            "Supplied pitch is within the configured demo thresholds; "
+            "this is not a safety assessment."
+        )
         if redacted_frame.pitch < -45.0:
             status = "VIOLATION"
-            action = "Warning: Avoid forward bending past waist boundaries. Drop your height via a vertical squat."
+            action = (
+                "Supplied pitch crossed a configured demo threshold; "
+                "this is not guidance for a person."
+            )
         elif redacted_frame.pitch < -30.0:
             status = "VIOLATION"
-            action = "Alert: Postural compromise detected. Avoid lying back or horizontal recline slopes."
+            action = (
+                "Supplied pitch crossed a configured demo threshold; "
+                "this is not guidance for a person."
+            )
             
         response_data = StreamResponseData(
             status=status,
             action_required=action,
-            confidence_score=0.95,
-            reasoning=f"Anterior check processed for pitch {redacted_frame.pitch}°.",
+            confidence_score=0.0,
+            reasoning=(
+                f"Demo threshold processed for pitch {redacted_frame.pitch}°; "
+                "no clinical confidence estimate is produced."
+            ),
             timestamp=timestamp
         )
         

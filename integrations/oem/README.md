@@ -2,6 +2,8 @@
 
 This package is an adapter boundary for future wearable integrations. It contains no Meta or other manufacturer SDK implementation. The `meta_glasses/` subpackage is a synthetic contract example only; it does not connect to Meta glasses or describe an official SDK payload.
 
+See the [wearable integration action plan](../../docs/wearable-integration-action-plan.md) for the proposed discovery, architecture, safety, and validation phases.
+
 An OEM-specific adapter should:
 
 1. Keep vendor SDK imports and permission handling inside its own subpackage.

@@ -81,7 +81,7 @@ class StreamResponseData(BaseModel):
     action_required: str
     confidence_score: float
     escalation_trigger: Optional[str] = None
-    disclaimer: str = "Abstract stream data serialization tool. This software only evaluates geometric sensor orientations and raw string structural patterns against user-defined parameters."
+    disclaimer: str = "Experimental prototype output; not validated for clinical use or patient guidance."
     reasoning: str
     timestamp: str
     post_op_recovery_guidance: Optional[PostOpRecoveryGuidance] = None
@@ -90,10 +90,10 @@ class StreamResponseData(BaseModel):
     ui_transformations: Optional[Dict[str, Any]] = None
     cognitive_reassurance_string: Optional[str] = None
     compliance_gate: Dict[str, str] = {
-        "software_classification": "Assisted Orientation Aid (Non-Diagnostic Middleware)",
-        "regulatory_disclaimer": "OcuGuard AI does not replace direct physician oversight or certified low-vision mobility coaching.",
-        "fail_safe_status": "ACTIVE_LOCAL_OVERRIDE_ENABLED",
-        "pii_anonymization_standard": "HIPAA/GDPR Compliant Stateless Edge Routing"
+        "software_classification": "Experimental prototype; regulatory status not assessed.",
+        "regulatory_disclaimer": "Not validated for diagnosis, treatment, triage, or patient guidance.",
+        "fail_safe_status": "Not evaluated or certified.",
+        "pii_anonymization_standard": "No certified standard; do not submit identifiable or health information."
     }
 
 class OrchestratorPayload(BaseModel):

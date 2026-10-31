@@ -1,6 +1,6 @@
-# OcuGuard: Smart-Eyewear Accessibility Prototype
+# OcuGuard: Recovery-Support Exploration
 
-OcuGuard is an open-source prototype for processing user-supplied text and telemetry and returning accessibility-oriented cues. It contains a Flask REST API, a FastAPI MCP/SSE server, a browser-based simulator, and agent modules for visual layout, orientation, and environment experiments.
+OcuGuard is an open-source project exploring how accessible, user-controlled software might help people use recovery instructions already provided by their care team and access optional encouragement. The long-term idea may include approved wearable devices as an interface, but the current repository is a software prototype, not a recovery product.
 
 **Status: prototype/demo only.** This repository does not currently integrate with Meta glasses or another manufacturer SDK, capture camera or microphone streams from a wearable, render output on eyewear, or establish a live human-helper connection. Inputs are supplied to its APIs or simulator; do not describe the project as an operational wearable product.
 
@@ -8,9 +8,37 @@ OcuGuard is an open-source prototype for processing user-supplied text and telem
 
 ## Purpose and scope
 
-The project explores how user-supplied visual and orientation metrics might be transformed into accessible text, layout, and environmental cues. It is an engineering prototype intended for simulation and experimentation, not a validated solution for post-operative recovery or other medical needs.
+### Why the project exists
 
-The current repository does not establish a connection to live wearable sensors or prove that its outputs improve safety, accessibility, or productivity. Hardware integration and any patient-facing use would require separate implementation, testing, and expert review.
+The idea was motivated by a friend's experience after retinal-detachment surgery: their doctor gave them a specific instruction about limiting head movement. That personal story points to a possible support problem - remembering and living with care-team instructions can be difficult - but it is not a universal recovery protocol. Instructions vary by procedure and person; only the treating care team can set or change them.
+
+### Proposed long-term purpose
+
+> **OcuGuard explores a patient-controlled recovery companion that makes care-team instructions easier to access and remember, while offering optional, non-clinical encouragement. It does not create, interpret, change, or replace medical instructions.**
+
+The first research scope should be narrow: people who have received a specific recovery instruction from their own care team and want help accessing that instruction. Do not frame OcuGuard as an app for "anyone struggling" until separate user needs, risks, and intended uses have been studied.
+
+The safest first product hypothesis is **non-sensing**: let a person view an instruction they already received, choose whether and when to receive a reminder, and optionally see a supportive message. A future OEM device could provide an approved display or input surface. Sensor-based posture monitoring or feedback is a later, separate research question; a device reading must never be treated as proof that a person is following instructions or is medically safe.
+
+### What "agentic" should mean here
+
+If agentic features are developed later, agents should coordinate a user-approved plan, not make care decisions:
+
+| Future role concept | Appropriate boundary |
+|---|---|
+| Instruction presenter | Show clinician-authored content faithfully; never invent or revise a position or movement restriction. |
+| Reminder coordinator | Let the user choose, pause, snooze, or stop reminders. A missed acknowledgment is not a clinical finding. |
+| Encouragement companion | Offer optional, reviewed, non-clinical messages. Do not claim to provide therapy, assess emotions, or reassure someone that a symptom is safe. |
+| Wearable adapter | Handle supported device connection, permissions, signal availability, and output capabilities; it is not a clinical authority. |
+| Human-support option | Offer a user-selected contact path only with clear consent and confirmation; do not imply an automatic clinician or helper connection. |
+
+The ten REST modes in this repository are experiments, not this recovery workflow. Their names and current behavior do not establish that these future roles exist or are safe.
+
+### What the repository does today
+
+The code currently provides a Flask REST API, a FastAPI MCP/SSE server, a browser/Streamlit simulator, and prototype agent modes that process caller-supplied text or numeric values. It has no care-plan management, patient reminders, reviewed encouragement library, live wearable connection, or evidence that its outputs improve recovery.
+
+Do not use the current software to decide or remind a person how to position after surgery. It is for synthetic-data development and demonstration only. Any real instructions, sensor feedback, emotional-support feature, or patient-facing use would require separate design, implementation, accessibility and safety testing, and qualified clinical, privacy, security, legal, and regulatory review. No wording or disclaimer can guarantee freedom from liability.
 
 ---
 
@@ -92,6 +120,28 @@ python serve.py
 
 3. Open [http://localhost:8000/index.html](http://localhost:8000/index.html) to try the simulated controls.
 
+### Streamlit developer console
+
+For an interactive, API-connected demo UI, install the optional dependencies:
+
+```bash
+python -m pip install -r requirements-ui.txt
+```
+
+Start the REST API in one terminal:
+
+```bash
+python app.py
+```
+
+Start OcuGuard Studio in a second terminal:
+
+```bash
+python -m streamlit run ui/streamlit_app.py
+```
+
+Open the local URL printed by Streamlit (normally [http://localhost:8501](http://localhost:8501)). The console sends synthetic frames to the Flask API at `http://127.0.0.1:5000` by default; change the API URL in the controls panel if needed. Pitch, roll, and yaw sliders update the illustrative glasses scene. Dragging the glasses locally shows green/red for the OcuGuard Core demo threshold; it does not change the API values. The dashboard identifies the selected agent and offers a catalog of all ten prototype modes and their input-based strengths. After you submit a frame, the selected agent's response and measured API round-trip time appear. An optional demo tone can play for selected warning-like API labels. This is not a live wearable alert. See the [Streamlit UI guide](ui/README.md) for details.
+
 ### Start the APIs
 
 Use Python 3.10 or newer. Install dependencies:
@@ -132,15 +182,16 @@ See the [unit and integration test strategy](AGENTS.md#testing-strategy) for the
 agents/                 Agent implementations
 core/                   Shared schemas and plugin interfaces
 docs/                   Specification, contributor guide, architecture
-integrations/oem/        OEM adapter contract; no vendor SDK adapters yet
+integrations/oem/        OEM adapter contract and synthetic Meta-shaped example only
 tests/                  Unit and API tests
+ui/                     Optional Streamlit developer console
 app.py                  Flask REST entry point
 mcp_sse_server.py       MCP/SSE entry point
 mcp_agent_server.py     MCP stdio entry point
 serve.py                Static simulator
 ```
 
-Future manufacturer-specific adapters belong under `integrations/oem/`. The vendor-neutral `OEMTelemetryAdapter` contract maps SDK frames into `core.schemas.TelemetryFrame`; it does not implement or imply a Meta or other OEM integration. See the [OEM integration notes](integrations/oem/README.md) and [architecture guide](docs/architecture.md).
+Future manufacturer-specific adapters belong under `integrations/oem/`. The vendor-neutral `OEMTelemetryAdapter` contract maps SDK frames into `core.schemas.TelemetryFrame`; it does not implement or imply a Meta or other OEM integration. See the [OEM integration notes](integrations/oem/README.md), [architecture guide](docs/architecture.md), and [wearable integration action plan](docs/wearable-integration-action-plan.md).
 
 ## API overview
 

@@ -11,6 +11,7 @@ Welcome! OcuGuard is an open-source prototype for exploring accessible ways to p
 | Track | Starter idea | Where to look |
 |---|---|---|
 | Accessible UI | Add keyboard navigation, visible focus, screen-reader labels, or a contrast control to the simulator. | `index.html` |
+| Streamlit console | Improve API connection feedback, demo presets, or response presentation in OcuGuard Studio. | `ui/streamlit_app.py` |
 | Demo experience | Add a synthetic demo scenario with clear labels, reset behavior, and no health data. | `index.html`, `serve.py` |
 | API contracts | Test malformed frames, defaults, batch limits, and unsupported `agent_mode` values. | `app.py`, `core/schemas.py`, `tests/` |
 | Agent reliability | Add deterministic boundary and error-path tests; mock external calls. | `agents/`, `tests/` |
@@ -45,6 +46,8 @@ python -m pip install pytest
 The dependency list does not currently include pytest. Installing it into a virtual environment keeps the production/runtime dependency list unchanged.
 
 ### Run the project
+
+To run the optional Streamlit console, install `requirements-ui.txt`, start `python app.py` in one terminal, and run `python -m streamlit run ui/streamlit_app.py` in another. See the [UI guide](../ui/README.md).
 
 Start the browser simulator:
 
@@ -97,7 +100,7 @@ The existing suite is not yet a clean release baseline: parts of `tests/test_tri
 - Some optional agent paths use an external model provider. Make outbound data flows explicit, mock those calls in tests, and do not assume every mode has an offline fallback.
 - Do not claim that `BE_MY_EYES` opens a live human connection or that any mode reads a glasses camera/microphone.
 - A disclaimer, renamed feature, or open-source license does not remove legal or regulatory obligations. Requests that cross into care decisions or patient-facing use need appropriate expert review.
-- For a proposed OEM integration, identify the approved SDK and device scope, permissions/consent model, local processing options, disable path, and test strategy before adding dependencies.
+- For a proposed OEM integration, follow the [wearable integration action plan](./wearable-integration-action-plan.md): identify the approved SDK and device scope, permissions/consent model, local processing options, disable path, and test strategy before adding dependencies.
 
 These are scope and product-quality boundaries, not legal advice. See the [product and engineering brief](./Spec.md) for the longer context.
 

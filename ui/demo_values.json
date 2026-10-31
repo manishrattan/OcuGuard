@@ -1,0 +1,68 @@
+{
+  "default_mode": "OCUGUARD_CORE",
+  "modes": {
+    "EYE_SENTINEL": {
+      "input_string": "Synthetic demo text for testing the response path.",
+      "values": {}
+    },
+    "OCUGUARD_CORE": {
+      "input_string": "Synthetic orientation demo.",
+      "values": {
+        "pitch": -20.0,
+        "roll": -4.0,
+        "yaw": -5.0
+      }
+    },
+    "GAZE_COMPASS": {
+      "input_string": "Synthetic target alignment demo.",
+      "values": {
+        "gaze_x": 0.0,
+        "gaze_y": 0.0,
+        "target_x": 0.5,
+        "target_y": 0.5,
+        "blind_x": 0.0,
+        "blind_y": 0.0,
+        "blind_r": 0.25
+      }
+    },
+    "TABULAR_LAYOUT_SPEECH": {
+      "input_string": "Quarterly report: Region North, 42 units; Region South, 37 units.",
+      "values": {}
+    },
+    "ERGONOMIC_SCHEDULE": {
+      "input_string": "Synthetic posture duration demo.",
+      "values": {
+        "posture_hold_duration": 30.0
+      }
+    },
+    "AMBIENT_LUMINANCE": {
+      "input_string": "Synthetic display environment demo.",
+      "values": {
+        "ambient_light_intensity": 55.0,
+        "contrast_adaptation_mode": "standard"
+      }
+    },
+    "BE_MY_EYES": {
+      "input_string": "Synthetic frame-processing demo. No helper is contacted.",
+      "values": {}
+    },
+    "ANISEIKONIA_SCALING": {
+      "input_string": "Synthetic text scaling demo.",
+      "values": {
+        "perceived_size_delta": 0.1
+      }
+    },
+    "METAMORPHOPSIA_GRID_REMAPPER": {
+      "input_string": "Synthetic grid transformation demo.",
+      "values": {
+        "text_wavy_index": 0.35
+      }
+    },
+    "BIOFEEDBACK_ANXIETY_SENTINEL": {
+      "input_string": "Synthetic text and score demo.",
+      "values": {
+        "vocal_stress_score": 0.2
+      }
+    }
+  }
+}
