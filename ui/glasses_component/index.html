@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Interactive synthetic glasses</title>
+    <style>
+      * { box-sizing: border-box; }
+      html, body { margin: 0; width: 100%; height: 100%; background: #080d18; }
+      body { overflow: hidden; font-family: system-ui, sans-serif; }
+      #wearable-stage {
+        position: relative; width: 100%; height: 505px; overflow: hidden;
+        border: 1px solid #26334a; border-radius: 14px;
+        background: radial-gradient(ellipse at 50% 47%, #12253a, #080d18 72%);
+      }
+      #wearable-canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+      #wearable-canvas:active { cursor: grabbing; }
+      .scene-label {
+        position: absolute; top: 16px; left: 18px; z-index: 2;
+        color: #b7f4ed; font-size: 12px; font-weight: 800; letter-spacing: .12em;
+      }
+      #zone-status {
+        position: absolute; top: 44px; left: 50%; z-index: 2;
+        transform: translateX(-50%); border: 1px solid #94a3b8;
+        border-radius: 999px; padding: 8px 18px; color: #94a3b8;
+        background: rgba(8, 13, 24, .86); font-size: 12px; font-weight: 800;
+        letter-spacing: .06em; white-space: nowrap;
+      }
+      .scene-help {
+        position: absolute; right: 16px; top: 16px; z-index: 2;
+        color: #d3deec; font-size: 11px; text-align: right;
+      }
+      #orientation-readout {
+        position: absolute; bottom: 30px; left: 0; right: 0; z-index: 2;
+        color: #f1f5f9; font-size: 13px; text-align: center;
+        text-shadow: 0 1px 5px #080d18; pointer-events: none;
+      }
+      .severity-legend {
+        position: absolute; left: 18px; bottom: 14px; z-index: 2;
+        display: flex; gap: 12px; color: #d3deec; font-size: 10px;
+      }
+      .severity-legend span { display: inline-flex; align-items: center; gap: 5px; }
+      .severity-legend i { width: 7px; height: 7px; border-radius: 50%; }
+      .green-dot { background: #42d392; }
+      .yellow-dot { background: #f5b942; }
+      .urgent-dot { background: #ff6670; }
+      #webgl-fallback {
+        position: absolute; inset: 40% 15% auto; display: none; z-index: 3;
+        color: #f1f5f9; text-align: center;
+      }
+    </style>
+    <script type="importmap">
+      {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"}}
+    </script>
+  </head>
+  <body>
+    <div id="wearable-stage" role="img" aria-label="Interactive Three.js synthetic glasses">
+      <div class="scene-label">SYNTHETIC WEARABLE VIEW</div>
+      <div id="zone-status" role="status">UNKNOWN · MCP RESPONSE MAP</div>
+      <div class="scene-help">DRAG TO ROTATE · MCP CHECKS DURING DRAG<br>DEMO ONLY</div>
+      <div id="webgl-fallback"></div>
+      <div id="orientation-readout">Pitch 0° · Roll 0° · Yaw 0°</div>
+      <div class="severity-legend" aria-label="Severity color legend">
+        <span><i class="green-dot"></i>GREEN</span>
+        <span><i class="yellow-dot"></i>YELLOW</span>
+        <span><i class="urgent-dot"></i>URGENT</span>
+      </div>
+    </div>
+    <script type="module">
+      import * as THREE from "three";
+
+      const stage = document.getElementById("wearable-stage");
+      const fallback = document.getElementById("webgl-fallback");
+      const readout = document.getElementById("orientation-readout");
+      const zoneStatus = document.getElementById("zone-status");
+      const severityColors = {
+        GREEN: "#42d392",
+        YELLOW: "#f5b942",
+        URGENT: "#ff6670",
+        UNKNOWN: "#94a3b8"
+      };
+      let pitch = 0;
+      let roll = 0;
+      let yaw = 0;
+      let severity = "UNKNOWN";
+      let drag = null;
+      let sequence = 0;
+      let lastSentAt = 0;
+      let lastSentOrientation = "";
+      const sessionId = Math.random().toString(36).slice(2);
+      let glasses;
+      let frameMaterial;
+      let rimLight;
+      let guideMaterial;
+
+      const sendComponentValue = (force = false) => {
+        const now = performance.now();
+        const orientation = JSON.stringify([pitch, roll, yaw]);
+        if (orientation === lastSentOrientation) return;
+        if (!force && now - lastSentAt < 400) return;
+        lastSentAt = now;
+        lastSentOrientation = orientation;
+        sequence += 1;
+        window.parent.postMessage({
+          isStreamlitMessage: true,
+          type: "streamlit:setComponentValue",
+          dataType: "json",
+          value: { source: "drag", sessionId, sequence, pitch, roll, yaw }
+        }, "*");
+      };
+
+      const updateOrientation = () => {
+        if (glasses) {
+          glasses.rotation.x = THREE.MathUtils.degToRad(Math.max(-90, Math.min(90, pitch)));
+          glasses.rotation.y = THREE.MathUtils.degToRad(Math.max(-180, Math.min(180, yaw)));
+          glasses.rotation.z = THREE.MathUtils.degToRad(Math.max(-180, Math.min(180, roll)));
+        }
+        readout.textContent =
+          `Pitch ${pitch.toFixed(0)}° · Roll ${roll.toFixed(0)}° · Yaw ${yaw.toFixed(0)}°`;
+      };
+
+      const updateSeverity = (value) => {
+        severity = severityColors[value] ? value : "UNKNOWN";
+        const color = severityColors[severity];
+        zoneStatus.textContent = `${severity} · MCP RESPONSE MAP`;
+        zoneStatus.style.color = color;
+        zoneStatus.style.borderColor = color;
+        zoneStatus.style.boxShadow = `0 0 18px ${color}55`;
+        if (frameMaterial) {
+          frameMaterial.color.set(color);
+          frameMaterial.emissive.set(color);
+          rimLight.color.set(color);
+          guideMaterial.color.set(color);
+        }
+      };
+
+      const applyRenderArgs = (args) => {
+        if (Number.isFinite(args.pitch)) pitch = Math.max(-90, Math.min(90, args.pitch));
+        if (Number.isFinite(args.roll)) roll = Math.max(-180, Math.min(180, args.roll));
+        if (Number.isFinite(args.yaw)) yaw = Math.max(-180, Math.min(180, args.yaw));
+        updateOrientation();
+        updateSeverity(args.severity);
+      };
+
+      const roundedRectangle = (width, height, radius) => {
+        const shape = new THREE.Shape();
+        const x = -width / 2;
+        const y = -height / 2;
+        shape.moveTo(x + radius, y);
+        shape.lineTo(x + width - radius, y);
+        shape.quadraticCurveTo(x + width, y, x + width, y + radius);
+        shape.lineTo(x + width, y + height - radius);
+        shape.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        shape.lineTo(x + radius, y + height);
+        shape.quadraticCurveTo(x, y + height, x, y + height - radius);
+        shape.lineTo(x, y + radius);
+        shape.quadraticCurveTo(x, y, x + radius, y);
+        return shape;
+      };
+
+      try {
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color("#080d18");
+        const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+        camera.position.set(0, 0.28, 7.3);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.setClearColor(0x080d18, 1);
+        renderer.domElement.id = "wearable-canvas";
+        renderer.domElement.setAttribute("aria-label", "Drag to rotate the synthetic glasses");
+        stage.insertBefore(renderer.domElement, stage.firstChild);
+
+        scene.add(new THREE.HemisphereLight(0xbdeeff, 0x182338, 2.2));
+        const keyLight = new THREE.DirectionalLight(0xffffff, 3.2);
+        keyLight.position.set(-3, 4, 5);
+        scene.add(keyLight);
+        rimLight = new THREE.PointLight(0x94a3b8, 28, 12);
+        rimLight.position.set(0, 0.8, 2.4);
+        scene.add(rimLight);
+
+        glasses = new THREE.Group();
+        scene.add(glasses);
+        frameMaterial = new THREE.MeshStandardMaterial({
+          color: 0x94a3b8, emissive: 0x94a3b8, emissiveIntensity: 0.8,
+          metalness: 0.58, roughness: 0.24
+        });
+        const lensMaterial = new THREE.MeshPhysicalMaterial({
+          color: 0x67bfe2, metalness: 0.18, roughness: 0.12,
+          transparent: true, opacity: 0.3, transmission: 0.22, thickness: 0.08,
+          side: THREE.DoubleSide
+        });
+        const rimGeometry = new THREE.ExtrudeGeometry(roundedRectangle(1.48, 0.9, 0.23), {
+          depth: 0.09, bevelEnabled: true, bevelSegments: 3,
+          steps: 1, bevelSize: 0.035, bevelThickness: 0.035
+        });
+        const lensGeometry = new THREE.ShapeGeometry(roundedRectangle(1.22, 0.65, 0.17));
+
+        for (const x of [-0.82, 0.82]) {
+          const rim = new THREE.Mesh(rimGeometry, frameMaterial);
+          rim.position.set(x, 0, 0);
+          glasses.add(rim);
+          const lens = new THREE.Mesh(lensGeometry, lensMaterial);
+          lens.position.set(x, 0, 0.105);
+          glasses.add(lens);
+          const glint = new THREE.Mesh(
+            new THREE.BoxGeometry(0.82, 0.018, 0.012),
+            new THREE.MeshBasicMaterial({ color: 0xc7f4ff, transparent: true, opacity: 0.38 })
+          );
+          glint.position.set(x, 0.24, 0.13);
+          glasses.add(glint);
+        }
+
+        const tube = (points, radius, material) => {
+          const curve = new THREE.CatmullRomCurve3(points.map(
+            ([x, y, z]) => new THREE.Vector3(x, y, z)
+          ));
+          glasses.add(new THREE.Mesh(
+            new THREE.TubeGeometry(curve, 32, radius, 10, false), material
+          ));
+        };
+        tube([[-0.09, 0.08, 0.02], [-0.04, 0.17, 0.06], [0.04, 0.17, 0.06], [0.09, 0.08, 0.02]], 0.055, frameMaterial);
+        tube([[-1.55, 0.04, 0.02], [-1.88, 0.02, -0.22], [-2.2, -0.1, -0.6]], 0.055, frameMaterial);
+        tube([[1.55, 0.04, 0.02], [1.88, 0.02, -0.22], [2.2, -0.1, -0.6]], 0.055, frameMaterial);
+
+        const floor = new THREE.GridHelper(12, 24, 0x31435d, 0x1e2b40);
+        floor.position.set(0, -1.35, -0.8);
+        floor.material.transparent = true;
+        floor.material.opacity = 0.42;
+        scene.add(floor);
+        const guide = new THREE.Mesh(
+          new THREE.TorusGeometry(2.15, 0.012, 8, 120),
+          new THREE.MeshBasicMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.36 })
+        );
+        guide.position.z = -0.6;
+        guideMaterial = guide.material;
+        glasses.add(guide);
+
+        const resize = () => {
+          const bounds = stage.getBoundingClientRect();
+          if (!bounds.width || !bounds.height) return;
+          camera.aspect = bounds.width / bounds.height;
+          camera.updateProjectionMatrix();
+          renderer.setSize(bounds.width, bounds.height, false);
+        };
+        const observer = new ResizeObserver(resize);
+        observer.observe(stage);
+        resize();
+        updateOrientation();
+        updateSeverity(severity);
+
+        renderer.domElement.addEventListener("pointerdown", (event) => {
+          drag = { x: event.clientX, y: event.clientY, pitch, yaw };
+          renderer.domElement.setPointerCapture(event.pointerId);
+          event.preventDefault();
+        });
+        renderer.domElement.addEventListener("pointermove", (event) => {
+          if (!drag) return;
+          pitch = Math.max(-90, Math.min(90, drag.pitch - (event.clientY - drag.y) * 0.35));
+          yaw = Math.max(-180, Math.min(180, drag.yaw + (event.clientX - drag.x) * 0.7));
+          updateOrientation();
+          sendComponentValue();
+        });
+        const finishDrag = () => {
+          if (drag) sendComponentValue(true);
+          drag = null;
+        };
+        renderer.domElement.addEventListener("pointerup", finishDrag);
+        renderer.domElement.addEventListener("pointercancel", finishDrag);
+
+        window.addEventListener("message", (event) => {
+          if (event.data?.type === "streamlit:render") {
+            applyRenderArgs(event.data.args || {});
+          }
+        });
+        window.parent.postMessage({
+          isStreamlitMessage: true,
+          type: "streamlit:componentReady",
+          apiVersion: 1
+        }, "*");
+        window.parent.postMessage({
+          isStreamlitMessage: true,
+          type: "streamlit:setFrameHeight",
+          height: 505
+        }, "*");
+
+        const animate = () => {
+          requestAnimationFrame(animate);
+          renderer.render(scene, camera);
+        };
+        animate();
+      } catch (error) {
+        fallback.style.display = "block";
+        fallback.textContent = "WebGL is unavailable. Use the pitch, roll, and yaw sliders.";
+        console.error("Unable to initialize the synthetic glasses viewport.", error);
+      }
+    </script>
+  </body>
+</html>

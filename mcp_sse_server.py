@@ -2,7 +2,8 @@ import json
 import logging
 from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, Response
+from pydantic import ValidationError
 
 # Official Model Context Protocol Engine Core & Type Validation Imports
 from mcp.server import Server
@@ -29,8 +30,7 @@ calibration_agent = AniseikoniaScalingAgent()
 remapper_agent = MetamorphopsiaGridRemapperAgent()
 anxiety_agent = BiofeedbackAnxietySentinelAgent()
 
-@mcp_server.list_tools()
-async def handle_list_tools() -> List[types.Tool]:
+def _tool_catalog() -> List[types.Tool]:
     """
     Expose the OcuGuard multi-agent pipeline inputs to external LLMs with strict semantic descriptions.
     """
@@ -127,6 +127,12 @@ async def handle_list_tools() -> List[types.Tool]:
         )
     ]
 
+
+@mcp_server.list_tools()
+async def handle_list_tools() -> List[types.Tool]:
+    return _tool_catalog()
+
+
 @mcp_server.call_tool()
 async def handle_call_tool(
     name: str, arguments: Optional[Dict[str, Any]]
@@ -193,111 +199,93 @@ async def handle_call_tool(
 mcp_transport = SseServerTransport("/messages")
 app = FastAPI(title="OcuGuard Spatial Middleware Backend")
 
-# Shared mock router engine to bypass the lack of session_id during validation crawls
-async def process_stateless_jsonrpc(request: Request) -> JSONResponse:
+# Stateless JSON-RPC fallback for requests that do not have an SSE session.
+def _jsonrpc_error(request_id: Any, code: int, message: str) -> JSONResponse:
+    return JSONResponse(
+        {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "error": {"code": code, "message": message},
+        }
+    )
+
+
+async def process_stateless_jsonrpc(request: Request) -> Response:
     """
     Safely captures concurrent stateless JSON-RPC discovery payloads from external crawlers.
     """
+    rpc_id: Any = None
     try:
         body_bytes = await request.body()
         if not body_bytes:
-            return JSONResponse({"jsonrpc": "2.0", "error": {"code": -32700, "message": "Parse error"}})
+            return _jsonrpc_error(None, -32700, "Parse error")
             
-        body = json.loads(body_bytes.decode("utf-8"))
+        body = json.loads(body_bytes)
+        if not isinstance(body, dict):
+            return _jsonrpc_error(None, -32600, "Invalid Request")
+
         rpc_id = body.get("id")
-        method = body.get("method", "")
+        method = body.get("method")
+        if body.get("jsonrpc") != "2.0" or not isinstance(method, str) or not method:
+            return _jsonrpc_error(rpc_id, -32600, "Invalid Request")
+        if "id" not in body:
+            return Response(status_code=202)
         
-        # Intercept tool-discovery requests and mock them exactly to specifications
-        if "tools/list" in method:
-            return JSONResponse({
-                "jsonrpc": "2.0",
-                "id": rpc_id,
-                "result": {
-                    "tools": [
-                        {
-                            "name": "evaluate_wearable_stream",
-                            "description": (
-                                "Stateless edge middleware to optimize visual-to-acoustic layouts, "
-                                "evaluate triage keywords, and monitor orientation ergonomics on smart eyewear."
-                            ),
-                            "inputSchema": {
-                                "type": "object",
-                                "properties": {
-                                    "user_id": {"type": "string", "description": "The anonymized tracking UUID."},
-                                    "input_string": {"type": "string", "description": "The text payload to analyze."},
-                                    "agent_mode": {"type": "string", "description": "The specific sub-agent plugin mode."},
-                                    "pitch": {"type": "number", "description": "Horizontal X-axis tracking metric."},
-                                    "yaw": {"type": "number", "description": "Vertical Y-axis tracking metric."},
-                                    "multimodal_flags": {"type": "array", "items": {"type": "string"}, "description": "Optional background triggers."},
-                                    "history": {"type": "object", "description": "User risk preferences."}
-                                },
-                                "required": ["user_id", "input_string", "agent_mode", "pitch", "yaw"]
-                              }
-                        }
-                    ]
+        if method == "tools/list":
+            tools = [
+                tool.model_dump(by_alias=True, exclude_none=True)
+                for tool in _tool_catalog()
+            ]
+            return JSONResponse(
+                {
+                    "jsonrpc": "2.0",
+                    "id": rpc_id,
+                    "result": {"tools": tools},
                 }
-            })
+            )
+        elif method == "tools/call":
+            params = body.get("params")
+            if not isinstance(params, dict):
+                return _jsonrpc_error(rpc_id, -32602, "Invalid params")
+            tool_name = params.get("name")
+            arguments = params.get("arguments")
+            if tool_name != "evaluate_wearable_stream" or not isinstance(arguments, dict):
+                return _jsonrpc_error(rpc_id, -32602, "Invalid params")
+
+            try:
+                from app import process_single_frame
+
+                data = process_single_frame(arguments)
+            except (ValidationError, TypeError, ValueError):
+                return _jsonrpc_error(rpc_id, -32602, "Invalid tool arguments")
+            except Exception:
+                logger.exception("Stateless MCP tool execution failed.")
+                return _jsonrpc_error(rpc_id, -32603, "Tool execution failed")
+
+            summary = (
+                f"Status: {data.get('status', 'UNKNOWN')}\n"
+                f"Action Required: {data.get('action_required', '')}\n"
+                f"Reasoning: {data.get('reasoning', '')}"
+            )
+            return JSONResponse(
+                {
+                    "jsonrpc": "2.0",
+                    "id": rpc_id,
+                    "result": {
+                        "content": [{"type": "text", "text": summary}],
+                        "structuredContent": {"data": data},
+                        "isError": False,
+                    },
+                }
+            )
             
-        elif "resources/list" in method:
+        elif method == "resources/list":
             return JSONResponse({"jsonrpc": "2.0", "id": rpc_id, "result": {"resources": []}})
-        elif "prompts/list" in method:
+        elif method == "prompts/list":
             return JSONResponse({"jsonrpc": "2.0", "id": rpc_id, "result": {"prompts": []}})
-        elif "triggers/list" in method:
+        elif method == "triggers/list":
             return JSONResponse({"jsonrpc": "2.0", "id": rpc_id, "result": {"triggers": [], "events": []}})
-        elif "tools/list" in method:
-            return JSONResponse({
-                "jsonrpc": "2.0",
-                "id": rpc_id,
-                "result": {
-                    "tools": [
-                        {
-                            "name": "evaluate_wearable_stream",
-                            "description": "Stateless edge middleware to optimize visual-to-acoustic layouts, evaluate triage keywords, and monitor orientation ergonomics on smart eyewear.",
-                            "inputSchema": {
-                                "type": "object",
-                                "properties": {
-                                    "user_id": {"type": "string", "description": "The anonymized tracking UUID."},
-                                    "input_string": {"type": "string", "description": "The text payload to analyze."},
-                                    "agent_mode": {"type": "string", "description": "The specific sub-agent plugin mode."},
-                                    "pitch": {"type": "number", "description": "Horizontal X-axis tracking metric."},
-                                    "yaw": {"type": "number", "description": "Vertical Y-axis tracking metric."},
-                                    "multimodal_flags": {"type": "array", "items": {"type": "string"}, "description": "Optional background triggers."},
-                                    "history": {"type": "object", "description": "User risk preferences."}
-                                },
-                                "required": ["user_id", "input_string", "agent_mode", "pitch", "yaw"]
-                            }
-                        },
-                        {
-                            "name": "ocuguard_calibrate_vision",
-                            "description": "Generate calibrated UI transformations for perceived size and metamorphopsia by returning a safe scale factor and warp matrix.",
-                            "inputSchema": {
-                                "type": "object",
-                                "properties": {
-                                    "visual_field_clearance": {"type": "number", "description": "Current visible field clearance ratio."},
-                                    "perceived_size_delta": {"type": "number", "description": "Measured asymmetric perceived size delta."},
-                                    "text_wavy_index": {"type": "number", "description": "Degree of text waviness perceived by the user."},
-                                    "oem_platform": {"type": "string", "description": "Target OEM platform identifier."}
-                                },
-                                "required": ["visual_field_clearance", "perceived_size_delta", "text_wavy_index"]
-                            }
-                        },
-                        {
-                            "name": "ocuguard_triage_anxiety",
-                            "description": "Evaluate vocal stress and panic phrases to deliver empathetic reassurance grounded in neuroadaptation milestones.",
-                            "inputSchema": {
-                                "type": "object",
-                                "properties": {
-                                    "input_string": {"type": "string", "description": "Captured user transcript or anxiety phrase."},
-                                    "vocal_stress_score": {"type": "number", "description": "Normalized vocal stress score from biofeedback sensors."},
-                                    "oem_platform": {"type": "string", "description": "Target OEM platform identifier."}
-                                },
-                                "required": ["input_string", "vocal_stress_score"]
-                            }
-                        }
-                    ]
-                }
-            })
-        elif "initialize" in method:
+        elif method == "initialize":
             return JSONResponse({
                 "jsonrpc": "2.0",
                 "id": rpc_id,
@@ -314,19 +302,9 @@ async def process_stateless_jsonrpc(request: Request) -> JSONResponse:
                 }
             })
             
-        return JSONResponse({
-            "jsonrpc": "2.0", 
-            "id": rpc_id, 
-            "result": {"tools": [], "resources": [], "prompts": [], "triggers": [], "events": []}
-        })
-    except Exception as e:
-        logger.error(f"Error handling stateless proxy crawler call structure: {e}")
-        
-    return JSONResponse({
-        "jsonrpc": "2.0", 
-        "id": 1, 
-        "result": {"tools": [], "resources": [], "prompts": [], "triggers": [], "events": []}
-    })
+        return _jsonrpc_error(rpc_id, -32601, "Method not found")
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return _jsonrpc_error(None, -32700, "Parse error")
 
 @app.get("/")
 async def handle_root_get():
