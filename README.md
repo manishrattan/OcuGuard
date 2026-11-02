@@ -73,11 +73,14 @@ The diagram describes code paths, not safety certification or real-time sensor i
 
 ## Sample screenshots
 
-1. Unsafe Head Movement detected
-![alt text](unsafe-position.png)
+### Unsafe Head Movement detected
+![alt text](img-unsafe-position.png)
 
-2. Safe Head Movement 
-![alt text](safe-position.png)
+### Safe Head Movement 
+![alt text](img-safe-position.png)
+
+### Be My Eyes escalation
+![alt text](img-be-myeyes.png)
 
 ### Agent modules
 1. Supervisor Agent (`SupervisorAgent`): Shared REST ingestion and routing code. It performs limited token checks and regex redaction; it is not comprehensive privacy protection or an authentication layer.
