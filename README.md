@@ -10,7 +10,7 @@ OcuGuard is an open-source project exploring how accessible, user-controlled sof
 
 ### Why the project exists
 
-The idea was motivated by a friend's experience after retinal-detachment surgery: their doctor gave them a specific instruction about limiting head movement. That personal story points to a possible support problem - remembering and living with care-team instructions can be difficult - but it is not a universal recovery protocol. Instructions vary by procedure and person; only the treating care team can set or change them.
+The idea was motivated by a anonymous person's experience after retinal-detachment surgery: their doctor gave them a specific instruction about limiting head movement. That personal story points to a possible support problem - remembering and living with care-team instructions can be difficult - but it is not a universal recovery protocol. Instructions vary by procedure and person; only the treating care team can set or change them.
 
 ### Proposed long-term purpose
 
@@ -70,6 +70,14 @@ flowchart LR
 ```
 
 The diagram describes code paths, not safety certification or real-time sensor integration. Some agents use external model calls; others use local rules or calculations. Do not assume every mode is offline or that all failures have a safe fallback.
+
+## Sample screenshots
+
+1. Unsafe Head Movement detected
+![alt text](unsafe-position.png)
+
+2. Safe Head Movement 
+![alt text](safe-position.png)
 
 ### Agent modules
 1. Supervisor Agent (`SupervisorAgent`): Shared REST ingestion and routing code. It performs limited token checks and regex redaction; it is not comprehensive privacy protection or an authentication layer.
