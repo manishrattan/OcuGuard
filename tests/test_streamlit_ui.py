@@ -178,6 +178,66 @@ def test_synthetic_frame_posts_jsonrpc_tools_call_with_profile_flags():
     )
 
 
+def test_be_my_eyes_confidence_is_included_in_mcp_payload():
+    app = _app_test()
+    app.selectbox[0].set_value("BE_MY_EYES").run()
+    confidence_slider = next(
+        slider for slider in app.slider if slider.label == "Synthetic confidence (%)"
+    )
+    confidence_slider.set_value(42.0).run()
+    send_button = next(
+        button for button in app.button if button.label == "Send synthetic OCR to MCP"
+    )
+
+    with patch("requests.post", return_value=FakeMcpResponse()) as post:
+        send_button.click().run()
+
+    assert not app.exception
+    arguments = post.call_args.kwargs["json"]["params"]["arguments"]
+    assert arguments["agent_mode"] == "BE_MY_EYES"
+    assert arguments["confidence"] == 42.0
+
+
+def test_speech_input_is_optional_and_has_browser_fallback():
+    app = _app_test()
+    app.selectbox[0].set_value("TABULAR_LAYOUT_SPEECH").run()
+    assert not app.exception
+    assert len(app.get("component_instance")) == 2
+
+    app.selectbox[0].set_value("OCUGUARD_CORE").run()
+    assert not app.exception
+    assert len(app.get("component_instance")) == 1
+
+    speech_document = (
+        Path(__file__).parents[1] / "ui" / "speech_component" / "index.html"
+    ).read_text(encoding="utf-8")
+    assert "window.SpeechRecognition || window.webkitSpeechRecognition" in speech_document
+    assert "Speech-to-text is not supported in this browser. Type the text instead." in speech_document
+    assert 'type: "streamlit:setComponentValue"' in speech_document
+
+
+def test_speech_transcript_callback_appends_to_the_text_field():
+    from ui import studio
+
+    session_state = {
+        "selected_agent_mode": "TABULAR_LAYOUT_SPEECH",
+        "speech-input-TABULAR_LAYOUT_SPEECH": {
+            "source": "browser_speech",
+            "sessionId": "synthetic-session",
+            "sequence": 1,
+            "transcript": "Synthetic dictated table text.",
+        },
+        "sample-text-TABULAR_LAYOUT_SPEECH": "Existing synthetic text.",
+    }
+
+    with patch.object(studio.st, "session_state", session_state):
+        studio._handle_speech_transcript_change()
+
+    assert session_state["sample-text-TABULAR_LAYOUT_SPEECH"] == (
+        "Existing synthetic text.\nSynthetic dictated table text."
+    )
+
+
 def test_drag_orientation_posts_mcp_request_and_plays_warning_sound():
     app = _app_test()
     app.session_state["demo_pitch"] = -35

@@ -56,6 +56,7 @@ def test_stateless_messages_tools_list_returns_jsonrpc_response():
     } == {
         "evaluate_wearable_stream",
         "ocuguard_calibrate_vision",
+        "ocuguard_remap_text_grid",
         "ocuguard_triage_anxiety",
     }
 
@@ -198,6 +199,99 @@ def test_stdio_mcp_server_lists_wearable_evaluation_tool():
     )
     assert "agent_mode" in evaluation_tool.inputSchema["properties"]
     assert "pitch" in evaluation_tool.inputSchema["required"]
+    assert {
+        "gaze_x",
+        "confidence",
+        "posture_hold_duration",
+        "ambient_light_intensity",
+        "perceived_size_delta",
+        "text_wavy_index",
+        "vocal_stress_score",
+    }.issubset(evaluation_tool.inputSchema["properties"])
+    assert set(evaluation_tool.inputSchema["properties"]["agent_mode"]["enum"]) == {
+        "EYE_SENTINEL",
+        "OCUGUARD_CORE",
+        "GAZE_COMPASS",
+        "TABULAR_LAYOUT_SPEECH",
+        "ERGONOMIC_SCHEDULE",
+        "AMBIENT_LUMINANCE",
+        "BE_MY_EYES",
+        "ANISEIKONIA_SCALING",
+        "METAMORPHOPSIA_GRID_REMAPPER",
+        "BIOFEEDBACK_ANXIETY_SENTINEL",
+    }
+
+
+@pytest.mark.parametrize(
+    ("name", "arguments", "expected_status", "expected_result_field"),
+    [
+        (
+            "ocuguard_calibrate_vision",
+            {"perceived_size_delta": 0.25},
+            "WARN",
+            '"scale_factor": 0.8',
+        ),
+        (
+            "ocuguard_remap_text_grid",
+            {"text_wavy_index": 0.5},
+            "WARN",
+            '"css_warp_matrix"',
+        ),
+        (
+            "ocuguard_triage_anxiety",
+            {"input_string": "synthetic anxious phrase", "vocal_stress_score": 0.2},
+            "WARN",
+            '"panic_phrase_detected": true',
+        ),
+    ],
+)
+def test_stdio_mcp_server_dispatches_direct_agent_tools(
+    name: str,
+    arguments: dict[str, object],
+    expected_status: str,
+    expected_result_field: str,
+):
+    content = asyncio.run(_call_stdio_tool(name, arguments))
+
+    assert len(content) == 1
+    result = content[0]
+    assert isinstance(result, mcp_types.TextContent)
+    assert f"Status: {expected_status}" in result.text
+    assert expected_result_field in result.text
+
+
+@pytest.mark.parametrize(
+    ("name", "arguments", "expected_status"),
+    [
+        ("ocuguard_calibrate_vision", {"perceived_size_delta": 0.25}, "WARN"),
+        ("ocuguard_remap_text_grid", {"text_wavy_index": 0.5}, "WARN"),
+        (
+            "ocuguard_triage_anxiety",
+            {"input_string": "synthetic anxious phrase", "vocal_stress_score": 0.2},
+            "WARN",
+        ),
+    ],
+)
+def test_stateless_messages_dispatches_direct_agent_tools(
+    name: str, arguments: dict[str, object], expected_status: str
+):
+    response = asyncio.run(
+        _request(
+            "POST",
+            "/messages",
+            {
+                "jsonrpc": "2.0",
+                "id": f"direct-{name}",
+                "method": "tools/call",
+                "params": {"name": name, "arguments": arguments},
+            },
+        )
+    )
+
+    assert response.status_code == 200
+    data = response.json()["result"]["structuredContent"]["data"]
+    assert data["status"] == expected_status
+    assert response.json()["result"]["isError"] is False
 
 
 def test_stdio_mcp_server_dispatches_evaluation_to_pipeline():

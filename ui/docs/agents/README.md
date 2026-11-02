@@ -22,4 +22,4 @@ These ten modes can be selected in OcuGuard Studio:
 - [Supervisor](./supervisor.md) is used by the REST request path; it is not a selectable Studio mode.
 - [Pre-Op Waitlist](./preop-waitlist.md) exists as a code module but is not currently registered in the main API or selectable in Studio.
 
-All descriptions are based on the checked-in implementation. These prototypes are not validated medical or safety systems. Text and numeric inputs are supplied by the demo; an agent does not imply camera, microphone, wearable, live helper, or lens-control integration.
+All descriptions are based on the checked-in implementation. These prototypes are not validated medical or safety systems. Text and numeric inputs are supplied by the demo; an agent does not imply camera, wearable, live helper, or lens-control integration. Optional browser speech-to-text is available for selected transcript-based modes; the browser's speech service may process audio outside this app, and OcuGuard uses only the transcript, not raw audio or voice-stress analysis.

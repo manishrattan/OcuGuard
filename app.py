@@ -267,6 +267,42 @@ def process_single_frame(frame_data: Dict[str, Any]) -> Dict[str, Any]:
     return response_data.model_dump()
 
 
+def process_direct_agent_tool(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Run a focused agent tool using a complete, validated telemetry frame."""
+    required_fields = {
+        "ocuguard_calibrate_vision": ("perceived_size_delta",),
+        "ocuguard_remap_text_grid": ("text_wavy_index",),
+        "ocuguard_triage_anxiety": ("input_string", "vocal_stress_score"),
+    }
+    if tool_name not in required_fields:
+        raise ValueError(f"Unknown direct agent tool: {tool_name}")
+
+    missing_fields = [
+        field for field in required_fields[tool_name] if field not in arguments
+    ]
+    if missing_fields:
+        raise ValueError(
+            f"{tool_name} requires: {', '.join(missing_fields)}."
+        )
+
+    frame_data = {
+        "user_id": "synthetic-mcp-tool",
+        "input_string": "",
+        **arguments,
+    }
+    frame = TelemetryFrame(**frame_data)
+    validated_frame = frame.model_dump()
+
+    if tool_name == "ocuguard_calibrate_vision":
+        payload = calibration_agent.calibrate(validated_frame)
+    elif tool_name == "ocuguard_remap_text_grid":
+        payload = remapper_agent.remap(validated_frame)
+    else:
+        payload = anxiety_agent.evaluate(validated_frame)
+
+    return payload.model_dump()
+
+
 # REST ENDPOINTS
 
 @app.route("/health", methods=["GET"])

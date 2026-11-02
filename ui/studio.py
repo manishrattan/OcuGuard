@@ -18,6 +18,7 @@ import requests
 import streamlit as st
 
 from glasses_widget import GLASSES_COMPONENT
+from speech_widget import SPEECH_COMPONENT
 
 
 API_TIMEOUT_SECONDS = 15
@@ -79,8 +80,8 @@ MODE_DETAILS = {
     "BE_MY_EYES": {
         "agent": "Be My Eyes (local prototype mode)",
         "title": "Supplied-frame processing",
-        "description": "No live human-helper connection is implemented.",
-        "strength": "Processes supplied frame metadata; it does not open a human-helper session.",
+        "description": "Uses supplied confidence and text; no live human-helper connection is implemented.",
+        "strength": "Demonstrates a confidence threshold and text-triggered escalation from supplied values without contacting a helper.",
     },
     "ANISEIKONIA_SCALING": {
         "agent": "Aniseikonia Scaling",
@@ -97,8 +98,8 @@ MODE_DETAILS = {
     "BIOFEEDBACK_ANXIETY_SENTINEL": {
         "agent": "Biofeedback Anxiety Sentinel",
         "title": "Text and score experiment",
-        "description": "Processes supplied text and a score; it is not a health assessment.",
-        "strength": "Processes supplied text and a numeric demo score; it does not assess health or anxiety.",
+        "description": "Processes a supplied transcript and manually entered demo score; it does not analyze audio or assess health.",
+        "strength": "Demonstrates transcript cues and a synthetic stress-score threshold from supplied values; no stress score is inferred from voice.",
     },
 }
 
@@ -117,13 +118,19 @@ MODE_VALUE_FIELDS = {
     "TABULAR_LAYOUT_SPEECH": (),
     "ERGONOMIC_SCHEDULE": ("posture_hold_duration",),
     "AMBIENT_LUMINANCE": ("ambient_light_intensity", "contrast_adaptation_mode"),
-    "BE_MY_EYES": (),
+    "BE_MY_EYES": ("confidence",),
     "ANISEIKONIA_SCALING": ("perceived_size_delta",),
     "METAMORPHOPSIA_GRID_REMAPPER": ("text_wavy_index",),
     "BIOFEEDBACK_ANXIETY_SENTINEL": ("vocal_stress_score",),
 }
 
 CONTRAST_MODES = ("standard", "high_contrast", "low_contrast")
+VOICE_TRANSCRIPT_MODES = {
+    "EYE_SENTINEL",
+    "TABULAR_LAYOUT_SPEECH",
+    "BE_MY_EYES",
+    "BIOFEEDBACK_ANXIETY_SENTINEL",
+}
 
 
 def _load_demo_values() -> tuple[str, dict[str, dict[str, object]]]:
@@ -205,6 +212,56 @@ def _preset_values(mode: str) -> dict[str, object]:
     if not isinstance(values, dict):
         raise ValueError(f"Demo values for {mode} are malformed.")
     return values
+
+
+def _handle_speech_transcript_change() -> None:
+    mode = st.session_state.get("selected_agent_mode")
+    if mode not in VOICE_TRANSCRIPT_MODES:
+        return
+
+    event = st.session_state.get(f"speech-input-{mode}")
+    if not isinstance(event, dict) or event.get("source") != "browser_speech":
+        return
+
+    sequence = event.get("sequence")
+    session_id = event.get("sessionId")
+    transcript = event.get("transcript")
+    if isinstance(sequence, bool) or not isinstance(sequence, int) or sequence < 1:
+        st.session_state["speech_transcript_notice"] = (
+            mode,
+            "The browser speech component returned an invalid update; type the text instead.",
+        )
+        return
+    if not isinstance(session_id, str) or not session_id:
+        st.session_state["speech_transcript_notice"] = (
+            mode,
+            "The browser speech component sent no session identifier; type the text instead.",
+        )
+        return
+    if not isinstance(transcript, str) or not transcript.strip():
+        return
+    if len(transcript) > 4000:
+        st.session_state["speech_transcript_notice"] = (
+            mode,
+            "The dictated text exceeded 4,000 characters and was not added.",
+        )
+        return
+
+    sequence_key = f"speech-sequence-{mode}-{session_id}"
+    if sequence <= st.session_state.get(sequence_key, 0):
+        return
+    st.session_state[sequence_key] = sequence
+
+    text_key = f"sample-text-{mode}"
+    existing_text = st.session_state.get(text_key, _preset_text(mode))
+    if not isinstance(existing_text, str):
+        existing_text = _preset_text(mode)
+    separator = "\n" if existing_text.strip() else ""
+    st.session_state[text_key] = f"{existing_text.rstrip()}{separator}{transcript.strip()}"
+    st.session_state["speech_transcript_notice"] = (
+        mode,
+        "Transcript added to the text field. Review it before submitting.",
+    )
 
 
 def _orientation_demo_is_dangerous(pitch: float) -> bool:
@@ -679,16 +736,32 @@ with control_column:
             options=list(MODE_DETAILS),
             index=list(MODE_DETAILS).index(DEFAULT_MODE),
             format_func=lambda mode: MODE_DETAILS[mode]["agent"],
+            key="selected_agent_mode",
         )
         st.caption(f"Mode: `{selected_mode}`")
         st.caption(MODE_DETAILS[selected_mode]["description"])
 
+        if selected_mode in VOICE_TRANSCRIPT_MODES:
+            st.markdown("**Optional voice-to-text**")
+            st.caption(
+                "Dictation uses your browser's speech service, which may process audio outside this app. "
+                "Only the transcript is added here; this prototype does not analyze raw audio. "
+                "Use synthetic text and avoid personal or health-identifying details."
+            )
+            SPEECH_COMPONENT(
+                key=f"speech-input-{selected_mode}",
+                on_change=_handle_speech_transcript_change,
+            )
+            notice = st.session_state.get("speech_transcript_notice")
+            if isinstance(notice, tuple) and len(notice) == 2 and notice[0] == selected_mode:
+                st.info(notice[1])
+
         sample_text = st.text_area(
-            "Synthetic OCR / text payload",
+            "Synthetic text / transcript payload",
             value=_preset_text(selected_mode),
             height=82,
             key=f"sample-text-{selected_mode}",
-            help="Synthetic text only; no camera or OCR is connected. Some modes may call an external model.",
+            help="Typed or dictated text only; no camera or OCR is connected. Review voice transcripts before submitting.",
         )
 
         preset_columns = st.columns(2)
@@ -812,6 +885,16 @@ with control_column:
                 index=CONTRAST_MODES.index(contrast_value),
                 key="contrast-mode",
             )
+        elif selected_mode == "BE_MY_EYES":
+            extra_fields["confidence"] = st.slider(
+                "Synthetic confidence (%)",
+                min_value=0.0,
+                max_value=100.0,
+                value=_preset_number(selected_mode, "confidence"),
+                step=1.0,
+                help="Manual demo input only; no vision model calculates this confidence.",
+                key="demo-confidence",
+            )
         elif selected_mode == "ANISEIKONIA_SCALING":
             extra_fields["perceived_size_delta"] = st.number_input(
                 "Size difference (demo value)",
@@ -823,16 +906,19 @@ with control_column:
             extra_fields["text_wavy_index"] = st.number_input(
                 "Grid variation (demo value)",
                 min_value=0.0,
+                max_value=1.0,
                 value=_preset_number(selected_mode, "text_wavy_index"),
                 step=0.05,
                 key="grid-variation",
             )
         elif selected_mode == "BIOFEEDBACK_ANXIETY_SENTINEL":
-            extra_fields["vocal_stress_score"] = st.number_input(
-                "Demo score",
+            extra_fields["vocal_stress_score"] = st.slider(
+                "Manual demo vocal stress score",
                 min_value=0.0,
+                max_value=1.0,
                 value=_preset_number(selected_mode, "vocal_stress_score"),
-                step=0.1,
+                step=0.05,
+                help="Synthetic value entered by the user; it is not measured or inferred from the microphone.",
                 key="demo-score",
             )
 

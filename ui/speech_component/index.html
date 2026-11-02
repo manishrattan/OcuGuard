@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: system-ui, sans-serif;
+        background: #101923;
+        color: #edf4fa;
+      }
+
+      body {
+        margin: 0;
+        padding: 8px 0;
+      }
+
+      button {
+        border: 1px solid #65cdb0;
+        border-radius: 8px;
+        padding: 9px 14px;
+        background: #12392f;
+        color: #f3fff9;
+        font-size: 14px;
+        font-weight: 650;
+        cursor: pointer;
+      }
+
+      button:disabled {
+        border-color: #607181;
+        background: #263440;
+        color: #d3dee7;
+        cursor: not-allowed;
+      }
+
+      #status {
+        margin-left: 10px;
+        color: #d6e2eb;
+        font-size: 13px;
+      }
+
+      #preview {
+        min-height: 18px;
+        margin-top: 6px;
+        color: #a9bac8;
+        font-size: 12px;
+        overflow-wrap: anywhere;
+      }
+    </style>
+  </head>
+  <body>
+    <button id="speech-button" type="button">Start dictation</button>
+    <span id="status" role="status">Ready; no audio is sent to the OcuGuard app.</span>
+    <div id="preview" aria-live="polite"></div>
+    <script>
+      const button = document.getElementById("speech-button");
+      const status = document.getElementById("status");
+      const preview = document.getElementById("preview");
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      let recognition = null;
+      let isRecording = false;
+      let finalTranscript = "";
+      let sequence = 0;
+      const sessionId = typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+      function sendComponentValue(value) {
+        window.parent.postMessage({
+          isStreamlitMessage: true,
+          type: "streamlit:setComponentValue",
+          value,
+          dataType: "json"
+        }, "*");
+      }
+
+      function setFrameHeight() {
+        window.parent.postMessage({
+          isStreamlitMessage: true,
+          type: "streamlit:setFrameHeight",
+          height: document.body.scrollHeight
+        }, "*");
+      }
+
+      function setRecording(active) {
+        isRecording = active;
+        button.textContent = active ? "Stop dictation" : "Start dictation";
+        button.setAttribute("aria-pressed", String(active));
+      }
+
+      if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = "en-US";
+
+        recognition.onresult = (event) => {
+          let interimTranscript = "";
+          for (let index = event.resultIndex; index < event.results.length; index += 1) {
+            const text = event.results[index][0].transcript;
+            if (event.results[index].isFinal) {
+              finalTranscript += `${text} `;
+            } else {
+              interimTranscript += text;
+            }
+          }
+          const currentText = `${finalTranscript}${interimTranscript}`.trim();
+          preview.textContent = currentText.length > 400
+            ? `…${currentText.slice(-400)}`
+            : currentText;
+          requestAnimationFrame(setFrameHeight);
+        };
+
+        recognition.onerror = (event) => {
+          status.textContent = `Speech service error: ${event.error}. You can type the text instead.`;
+        };
+
+        recognition.onend = () => {
+          setRecording(false);
+          const transcript = finalTranscript.trim();
+          if (transcript) {
+            sequence += 1;
+            sendComponentValue({
+              source: "browser_speech",
+              sessionId,
+              sequence,
+              transcript
+            });
+            status.textContent = "Transcript added to the text field; review it before submitting.";
+          } else if (status.textContent === "Listening…") {
+            status.textContent = "No speech was transcribed. You can type the text instead.";
+          }
+        };
+      } else {
+        button.disabled = true;
+        status.textContent = "Speech-to-text is not supported in this browser. Type the text instead.";
+      }
+
+      button.addEventListener("click", () => {
+        if (!recognition) {
+          return;
+        }
+        if (isRecording) {
+          recognition.stop();
+          status.textContent = "Stopping dictation…";
+          return;
+        }
+        finalTranscript = "";
+        preview.textContent = "";
+        status.textContent = "Listening…";
+        try {
+          recognition.start();
+          setRecording(true);
+        } catch (error) {
+          status.textContent = `Could not start dictation: ${error.message}`;
+          setRecording(false);
+        }
+      });
+
+      window.parent.postMessage({
+        isStreamlitMessage: true,
+        type: "streamlit:componentReady",
+        apiVersion: 1
+      }, "*");
+      setFrameHeight();
+    </script>
+  </body>
+</html>

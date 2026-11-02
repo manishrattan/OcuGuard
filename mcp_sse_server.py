@@ -9,10 +9,6 @@ from pydantic import ValidationError
 from mcp.server import Server
 import mcp.types as types
 
-from agents.aniseikonia_scaling_agent import AniseikoniaScalingAgent
-from agents.metamorphopsia_grid_remapper_agent import MetamorphopsiaGridRemapperAgent
-from agents.biofeedback_anxiety_sentinel_agent import BiofeedbackAnxietySentinelAgent
-
 # Use the native, core SSE transport layer which is always available
 from mcp.server.sse import SseServerTransport
 
@@ -25,10 +21,6 @@ mcp_server = Server(
     name="ocuguard-spatial",
     version="2.0.0"
 )
-
-calibration_agent = AniseikoniaScalingAgent()
-remapper_agent = MetamorphopsiaGridRemapperAgent()
-anxiety_agent = BiofeedbackAnxietySentinelAgent()
 
 def _tool_catalog() -> List[types.Tool]:
     """
@@ -50,30 +42,48 @@ def _tool_catalog() -> List[types.Tool]:
                     },
                     "input_string": {
                         "type": "string", 
-                        "description": "The textual payload to analyze, supporting raw OCR transcriptions, document text, or verbal symptom phrases."
+                        "description": "Supplied OCR-like text or optional voice-to-text transcript; not a clinical input."
                     },
                     "agent_mode": {
                         "type": "string", 
                         "description": "The specific operational sub-agent plugin designed to process the structural context of the telemetry frame.",
                         "enum": [
-                            "EYE_SENTINEL", 
-                            "OCUGUARD_CORE", 
-                            "GAZE_COMPASS", 
-                            "TABULAR_LAYOUT_SPEECH", 
-                            "ERGONOMIC_SCHEDULE", 
-                            "AMBIENT_LUMINANCE", 
+                            "EYE_SENTINEL",
+                            "OCUGUARD_CORE",
+                            "GAZE_COMPASS",
+                            "TABULAR_LAYOUT_SPEECH",
+                            "ERGONOMIC_SCHEDULE",
+                            "AMBIENT_LUMINANCE",
                             "BE_MY_EYES",
-                            "PRE_OP_BRIDGE"
+                            "ANISEIKONIA_SCALING",
+                            "METAMORPHOPSIA_GRID_REMAPPER",
+                            "BIOFEEDBACK_ANXIETY_SENTINEL"
                         ]
                     },
                     "pitch": {
                         "type": "number", 
-                        "description": "The real-time horizontal X-axis tracking metric captured from the eyewear's on-board inertial measurement unit (IMU)."
+                        "description": "Supplied head pitch angle in degrees."
                     },
+                    "roll": {"type": "number", "description": "Supplied roll rotation angle in degrees."},
                     "yaw": {
                         "type": "number", 
-                        "description": "The real-time vertical Y-axis rotational tracking metric captured from the eyewear's coordinate spatial matrix."
+                        "description": "Supplied yaw rotation angle in degrees."
                     },
+                    "gaze_x": {"type": "number"},
+                    "gaze_y": {"type": "number"},
+                    "target_x": {"type": "number"},
+                    "target_y": {"type": "number"},
+                    "blind_x": {"type": "number"},
+                    "blind_y": {"type": "number"},
+                    "blind_r": {"type": "number"},
+                    "confidence": {"type": "number", "description": "Manual synthetic Be My Eyes confidence percentage, from 0 to 100; not computed from an image."},
+                    "posture_hold_duration": {"type": "number"},
+                    "ambient_light_intensity": {"type": "number"},
+                    "contrast_adaptation_mode": {"type": "string", "enum": ["standard", "high_contrast", "low_contrast"]},
+                    "visual_field_clearance": {"type": "number"},
+                    "perceived_size_delta": {"type": "number"},
+                    "text_wavy_index": {"type": "number"},
+                    "vocal_stress_score": {"type": "number", "description": "Manually supplied synthetic score from 0 to 1; not inferred from voice."},
                     "multimodal_flags": {
                         "type": "array",
                         "items": {"type": "string"},
@@ -83,10 +93,14 @@ def _tool_catalog() -> List[types.Tool]:
                         "type": "object",
                         "properties": {
                             "cataract_surgery": {"type": "boolean", "description": "True if the wearer has a history of post-cataract vision recovery restrictions."},
+                            "years_since_surgery": {"type": "number", "description": "Synthetic profile duration since surgery."},
                             "age_over_50": {"type": "boolean", "description": "True if the wearer matches demographic criteria for elevated clinical risk windows."},
                             "retinal_disease": {"type": "boolean", "description": "True if pre-existing retinal anomalies are configured within user preferences."},
                             "diabetic_retinopathy": {"type": "boolean", "description": "True if active diabetic microvascular telemetry weights apply."},
-                            "previous_detachment": {"type": "boolean", "description": "True if the user profile tracks structural history of structural detachment paths."}
+                            "previous_detachment": {"type": "boolean", "description": "True if the user profile tracks structural detachment history."},
+                            "postural_tracking_baseline": {"type": "number"},
+                            "ambient_lighting_sensitivity": {"type": "string"},
+                            "workplace_ergonomic_goals": {"type": "array", "items": {"type": "string"}}
                         },
                         "description": "User-configured health history toggles used by the triage engine to multiplicatively calculate warning metrics."
                     }
@@ -97,17 +111,28 @@ def _tool_catalog() -> List[types.Tool]:
         types.Tool(
             name="ocuguard_calibrate_vision",
             description=(
-                "Generate calibrated UI transformations for perceived size and text warping distortions, returning a safe scale factor and CSS warp matrix."
+                "Generate an experimental text scaling transform from a supplied perceived-size difference."
             ),
             inputSchema={
                 "type": "object",
                 "properties": {
                     "visual_field_clearance": {"type": "number", "description": "Current visible field clearance ratio."},
                     "perceived_size_delta": {"type": "number", "description": "Measured asymmetric perceived size delta."},
-                    "text_wavy_index": {"type": "number", "description": "Degree of text waviness perceived by the user."},
                     "oem_platform": {"type": "string", "description": "Target OEM platform identifier."}
                 },
-                "required": ["visual_field_clearance", "perceived_size_delta", "text_wavy_index"]
+                "required": ["perceived_size_delta"]
+            }
+        ),
+        types.Tool(
+            name="ocuguard_remap_text_grid",
+            description="Generate an experimental grid-warp transform from a supplied text-waviness value.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "text_wavy_index": {"type": "number", "description": "Synthetic text-waviness value from 0 to 1."},
+                    "oem_platform": {"type": "string", "description": "Target OEM platform identifier."}
+                },
+                "required": ["text_wavy_index"]
             }
         ),
         types.Tool(
@@ -118,8 +143,8 @@ def _tool_catalog() -> List[types.Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "input_string": {"type": "string", "description": "Captured user transcript or anxiety phrase."},
-                    "vocal_stress_score": {"type": "number", "description": "Normalized vocal stress score from biofeedback sensors."},
+                    "input_string": {"type": "string", "description": "Supplied synthetic transcript text; not analyzed from audio."},
+                    "vocal_stress_score": {"type": "number", "description": "Manually supplied synthetic score from 0 to 1; not measured from audio."},
                     "oem_platform": {"type": "string", "description": "Target OEM platform identifier."}
                 },
                 "required": ["input_string", "vocal_stress_score"]
@@ -140,44 +165,37 @@ async def handle_call_tool(
     """
     Route tool triggers straight down into the localized sub-agent evaluations.
     """
-    if name not in ["evaluate_wearable_stream", "ocuguard_calibrate_vision", "ocuguard_triage_anxiety"] or not arguments:
+    if name not in [
+        "evaluate_wearable_stream",
+        "ocuguard_calibrate_vision",
+        "ocuguard_remap_text_grid",
+        "ocuguard_triage_anxiety",
+    ] or not arguments:
         raise ValueError("Invalid parameters or unrecognized tool identifier passed to execution endpoint.")
 
     try:
         if name == "evaluate_wearable_stream":
             from app import process_single_frame
             response_payload = process_single_frame(arguments)
-            
-            status = response_payload.get("status", response_payload.get("data", {}).get("status", "URGENT"))
-            action = response_payload.get("action_required", response_payload.get("data", {}).get("action_required", ""))
-            reasoning = response_payload.get("reasoning", response_payload.get("data", {}).get("reasoning", ""))
-        
-        elif name == "ocuguard_calibrate_vision":
-            # Directly call the appropriate agent based on inputs
-            if "perceived_size_delta" in arguments:
-                payload = calibration_agent.calibrate(arguments)
-            elif "text_wavy_index" in arguments:
-                payload = remapper_agent.remap(arguments)
-            else:
-                raise ValueError("Invalid arguments for ocuguard_calibrate_vision")
-            
-            status = payload.status
-            action = "Apply UI transformations as specified in the payload."
-            reasoning = payload.cognitive_reassurance_string
-
-        elif name == "ocuguard_triage_anxiety":
-            payload = anxiety_agent.evaluate(arguments)
-            status = payload.status
-            action = "Deliver cognitive reassurance and monitor vocal stress."
-            reasoning = payload.cognitive_reassurance_string
-
         else:
-             raise ValueError(f"Tool '{name}' is not implemented in handle_call_tool.")
+            from app import process_direct_agent_tool
+            response_payload = process_direct_agent_tool(name, arguments)
+
+        status = response_payload.get("status", "UNKNOWN")
+        action = response_payload.get(
+            "action_required",
+            response_payload.get("cognitive_reassurance_string", ""),
+        )
+        reasoning = response_payload.get(
+            "reasoning",
+            response_payload.get("cognitive_reassurance_string", ""),
+        )
         
         output_text = (
             f"Status/Severity Ring: {status}\n"
             f"Action Required: {action}\n"
-            f"Orchestration Reasoning: {reasoning}"
+            f"Orchestration Reasoning: {reasoning}\n"
+            f"Result: {json.dumps(response_payload, sort_keys=True)}"
         )
         
         # Explicit constructor formatting clears Pylance rules smoothly
@@ -249,13 +267,24 @@ async def process_stateless_jsonrpc(request: Request) -> Response:
                 return _jsonrpc_error(rpc_id, -32602, "Invalid params")
             tool_name = params.get("name")
             arguments = params.get("arguments")
-            if tool_name != "evaluate_wearable_stream" or not isinstance(arguments, dict):
+            supported_tools = {
+                "evaluate_wearable_stream",
+                "ocuguard_calibrate_vision",
+                "ocuguard_remap_text_grid",
+                "ocuguard_triage_anxiety",
+            }
+            if tool_name not in supported_tools or not isinstance(arguments, dict):
                 return _jsonrpc_error(rpc_id, -32602, "Invalid params")
 
             try:
-                from app import process_single_frame
+                if tool_name == "evaluate_wearable_stream":
+                    from app import process_single_frame
 
-                data = process_single_frame(arguments)
+                    data = process_single_frame(arguments)
+                else:
+                    from app import process_direct_agent_tool
+
+                    data = process_direct_agent_tool(tool_name, arguments)
             except (ValidationError, TypeError, ValueError):
                 return _jsonrpc_error(rpc_id, -32602, "Invalid tool arguments")
             except Exception:
@@ -264,8 +293,8 @@ async def process_stateless_jsonrpc(request: Request) -> Response:
 
             summary = (
                 f"Status: {data.get('status', 'UNKNOWN')}\n"
-                f"Action Required: {data.get('action_required', '')}\n"
-                f"Reasoning: {data.get('reasoning', '')}"
+                f"Action Required: {data.get('action_required', data.get('cognitive_reassurance_string', ''))}\n"
+                f"Reasoning: {data.get('reasoning', data.get('cognitive_reassurance_string', ''))}"
             )
             return JSONResponse(
                 {

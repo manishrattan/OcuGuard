@@ -24,6 +24,10 @@ No. The text must already be supplied. The UI does not capture an image or extra
 
 No. Despite the agent name, the current mode returns text. It does not synthesize speech or play an audio description.
 
+### Can I enter document text by voice?
+
+The Studio offers optional browser speech-to-text. It transcribes the user's speech into the text field; the browser's speech service may process audio outside this app. It does not read a document from a camera or speak the agent's result aloud.
+
 ### How does the local fallback detect a table?
 
 It uses basic text markers such as `|`, `---`, or the word “columns”; dash or bullet prefixes are used to recognize simple lists.

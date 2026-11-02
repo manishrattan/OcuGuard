@@ -44,7 +44,9 @@
     },
     "BE_MY_EYES": {
       "input_string": "Synthetic frame-processing demo. No helper is contacted.",
-      "values": {}
+      "values": {
+        "confidence": 95.0
+      }
     },
     "ANISEIKONIA_SCALING": {
       "input_string": "Synthetic text scaling demo.",

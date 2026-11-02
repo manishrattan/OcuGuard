@@ -34,6 +34,10 @@ No. The position rotation and posture messages are unvalidated sample behavior, 
 
 The current Studio exposes `cataract_surgery` and `retinal_disease` synthetic history flags; it does not expose a `post_op_recovery` control. Do not infer the specific post-op branch from those flags.
 
+### Can I enter a transcript by voice?
+
+The Studio offers optional browser speech-to-text for this text-oriented mode. The browser's speech service may process audio outside this app; only the resulting transcript is added to the text field. Typed input remains available.
+
 ## Boundaries
 
 The -55° rule is hard-coded demo logic, not a medical threshold. An LLM may be used when configured. No camera, microphone, alert service, or validated clinical protocol is implemented here.

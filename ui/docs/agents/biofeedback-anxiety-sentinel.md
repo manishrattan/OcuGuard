@@ -6,18 +6,18 @@
 
 ## What it does
 
-This mode combines a caller-supplied vocal-stress score with a small set of supplied text phrases. In the current code, a score of 0.8 or higher or a matching phrase such as “anxious” or “cannot breathe” returns `WARN`; otherwise it returns `SAFE`.
+This mode combines a manually supplied synthetic stress score with a small set of supplied text phrases. In the current code, a score of 0.8 or higher or a matching phrase such as “anxious” or “cannot breathe” returns `WARN`; otherwise it returns `SAFE`.
 
 ## Inputs and outputs
 
-- A synthetic `vocal_stress_score` and text.
+- A manually entered synthetic `vocal_stress_score` from 0 to 1 and text.
 - Returns a status, a phrase-detected flag, the supplied score, and reassurance text.
 
 ## FAQ
 
-### Does it listen to a microphone or analyze a voice?
+### Does it measure vocal stress from a microphone?
 
-No. The score and text are supplied values. The Studio does not capture audio or run voice analysis.
+No. The score is entered manually and is not inferred from speech. The Studio offers optional browser speech-to-text for entering a transcript; the browser's speech service may process audio outside this app. Only the transcript is added to the text field, and no raw audio is analyzed by OcuGuard.
 
 ### Does it assess anxiety or breathing problems?
 
