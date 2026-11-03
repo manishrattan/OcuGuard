@@ -4,7 +4,20 @@
 >
 > This plan is for technical discovery and a controlled software prototype. It is not legal, clinical, privacy, security, or regulatory advice, and it does not authorize patient-facing use.
 
-> **Implementation update (2026-11):** the repository now includes a prototype instruction-card/reminder API and Streamlit page, plus a synthetic device-session lifecycle contract. Users can pause, resume, snooze, acknowledge, and delete schedules; due state is surfaced when the UI/API is used, not delivered as a background notification. It still has no official OEM SDK, device connection, encrypted persistence, or production user authentication. The implementation is for synthetic data only and does not close the product, privacy, security, or clinical gates below.
+> **Implementation status (2026-11):** the software P0/P1 prototype scope has been implemented, but the wearable roadmap below is not complete. The recovery companion can save user-entered instruction cards, present text in the browser, and maintain user-scheduled reminders. Its device lifecycle adapter is a simulator, not an OEM integration. Use synthetic data only; no production, clinical, Meta, or hardware-readiness claim is made.
+
+### Implemented prototype scope
+
+| Capability | Current implementation | Not yet established |
+|---|---|---|
+| Instruction cards | Create, edit, list, and delete user-entered text with a user-entered source label. Text is preserved as submitted. | The source is not verified; no care-team account, review, import, or clinician workflow exists. |
+| Reminders | User-selected time/timezone; configurable one-time/daily/weekly intervals; pause, resume, snooze, acknowledge, and delete. | Due state is shown when the UI/API is used. There is no background notification delivery, delivery guarantee, or adherence monitoring. |
+| Accessible presentation | Browser read-aloud with a stop control and visible text. | This is not glasses audio output or an accessibility validation result. Browser/OS speech processing may vary. |
+| Device lifecycle | Start/pause/resume/stop and capability discovery through a synthetic, in-process adapter. | No Meta SDK, pairing, connection, capture, display/audio output, or durable session service exists. |
+| Configuration and review prep | `config/app.json` controls feature flags, field/storage limits, reminder intervals, timezones, API defaults, and draft listing metadata. A store/developer-program checklist exists in `docs/store-readiness.md`. | Listing values and category are drafts; current program eligibility, official SDK terms, and store submission requirements remain unverified. |
+| Data protection | Recovery data is scoped by a caller-provided demo ID and stored in local SQLite; data deletion is available. Production startup fails closed. | The database is unencrypted; demo IDs are not authenticated identities. The optional shared API key is not per-user authorization. |
+
+These features are prototype foundations, not proof of product readiness. See the [architecture guide](architecture.md) and [store readiness checklist](store-readiness.md) for boundaries and release gates.
 
 ## Goal
 
@@ -24,8 +37,9 @@ Start with a read-only, user-initiated connection and capability check. If a rea
 | Meta example | `MetaGlassesExampleAdapter` maps an OcuGuard-defined synthetic object. The device-session demo does not import a Meta SDK or access a device. | Keep both as fixtures/examples. Do not treat their fields or capabilities as a Meta API contract. |
 | Shared frame | `TelemetryFrame` requires `user_id` and `input_string`; several sensor fields default to `0.0`, and the model has no event timestamp, sequence, unit/source metadata, or explicit freshness state. | A missing measurement could be confused with a real zero. Define a versioned event contract before connecting sensors. |
 | REST ingestion | `POST /v1/stream/evaluate` remains a request/response evaluation path. Separate recovery routes persist user-entered cards and schedules in local SQLite; device session routes exercise a synthetic lifecycle. | These additions are not a wearable stream protocol. Define production identity, authorization, replay/freshness, and storage before any remote connection. |
-| Processing | The API routes to existing agent modes; some paths can use external model providers when configured. The UI is synthetic and calls the REST API. | Do not connect wearable capture to existing agent routes until each data flow and mode is reviewed; no raw media or health content should be forwarded by default. |
-| Runtime safeguards | The repository documents incomplete production authentication and privacy controls; the API rate limit is process-local. | Keep any integration local/private and single-user for the prototype. Do not expose a device-connected service publicly or use real patient data. |
+| Processing | The legacy evaluation API still routes to agent modes; the separate recovery API stores user-entered content without sending it to those agents. The Streamlit companion calls the recovery/device endpoints. | Keep recovery content separate from agent evaluation. Do not connect wearable capture or raw media to existing agent routes. |
+| Persistence and UI output | Recovery cards/reminders use local SQLite; browser read-aloud is explicitly user-triggered. | SQLite is unencrypted; browser/OS speech handling varies; use synthetic text only. There is no background scheduler or device output. |
+| Runtime safeguards | `API_KEY` can protect recovery/device routes with a shared key. `OCUGUARD_ENVIRONMENT=production` fails closed until key controls exist. Some legacy rate limiting remains process-local. | No per-user authentication/authorization, encrypted storage, transport/deployment controls, or operational release is implemented. Keep the prototype private. |
 
 These are engineering observations, not claims that the current redaction, defaults, or disclaimers are adequate for real-world data.
 
@@ -63,6 +77,8 @@ flowchart LR
 
 ### Phase 0 - Product and platform discovery
 
+**Status: open.** The app-store readiness document contains a draft listing, but no target Meta product path, official SDK access, supported device matrix, or eligibility decision has been recorded.
+
 **Work**
 
 - Select one user-validated, non-diagnostic accessibility task for a first technical prototype.
@@ -75,6 +91,8 @@ flowchart LR
 **Exit gate:** product and engineering owners agree on one target platform/device and one narrowly scoped experience. If SDK access, terms, or capability is uncertain, continue with the simulator only.
 
 ### Phase 1 - Data-flow, privacy, security, and safety design
+
+**Status: partial.** The prototype documents its local SQLite and browser-speech data flows and blocks production startup. A full threat model, approved consent workflow, per-user identity, encrypted storage, and qualified review are still outstanding.
 
 **Work**
 
@@ -89,6 +107,8 @@ flowchart LR
 **Exit gate:** no unresolved high-risk data flow or ambiguous clinical claim. No real patient or biometric data is used for development.
 
 ### Phase 2 - Versioned event and lifecycle contracts
+
+**Status: partial.** A synthetic lifecycle contract exists for session state. The versioned wearable event envelope, sensor freshness/quality semantics, permission lifecycle, and output contract described below are not implemented.
 
 **Work**
 
@@ -113,6 +133,8 @@ flowchart LR
 
 ### Phase 3 - Simulator and contract test harness
 
+**Status: partial.** Hardware-free tests cover instruction/reminder APIs and the synthetic session lifecycle. They do not yet replay vendor-shaped sensor events or cover the full permission, stale/reordered event, and SDK-version fault matrix described below.
+
 **Work**
 
 - Extend the synthetic adapter fixture to represent connection, permission, available/unavailable sensors, stale/out-of-order events, disconnects, and unsupported capabilities.
@@ -125,6 +147,8 @@ flowchart LR
 **Exit gate:** tests cover the normal path and the listed failure paths without network, credentials, or physical hardware.
 
 ### Phase 4 - First-device technical spike
+
+**Status: blocked on Phase 0 and approved SDK access.** Do not implement or claim a Meta device connection based on the synthetic adapter.
 
 **Work**
 
@@ -140,6 +164,8 @@ flowchart LR
 
 ### Phase 5 - User-controlled output and accessibility evaluation
 
+**Status: partial.** Browser speech is user-triggered and interruptible. It is not a wearable output adapter and has not undergone accessibility or usability evaluation.
+
 **Work**
 
 - Define an output adapter for the actual capabilities approved by the target device: companion screen, glasses display, audio, or other supported modality. Do not assume the device supports any particular output API.
@@ -152,6 +178,8 @@ flowchart LR
 **Exit gate:** users can understand the source and uncertainty of output, turn it off, and recover from unavailable-device/network conditions without misleading reassurance.
 
 ### Phase 6 - Private engineering pilot
+
+**Status: not started.** The current local store and shared-key model do not meet the controls required for a pilot.
 
 **Work**
 
@@ -166,25 +194,31 @@ flowchart LR
 
 ### Phase 7 - Separate patient-facing/product gate
 
+**Status: not started and out of scope for this prototype.**
+
 Do not treat a successful technical prototype as approval for patient use. Before any patient-facing claim, clinical workflow, or care-related feature, obtain the appropriate professional assessment for intended use, jurisdiction, evidence, human factors, accessibility, privacy, security, and regulatory obligations. Define a separate release plan only after these reviews establish what is permissible and what evidence is required.
 
-## Prioritized backlog
+## Remaining prioritized wearable backlog
 
-| ID | Priority | Action | Owner role | Depends on | Acceptance evidence |
-|---|---|---|---|---|---|
-| WEAR-01 | P0 | Select one user-validated use case and target device/OS; verify official SDK access and terms. | Product + OEM/platform lead | None | Decision record links current official sources and names unsupported assumptions. |
-| WEAR-02 | P0 | Create data-flow, consent, privacy, threat, and intended-use review. | Privacy/security + product | WEAR-01 | Review artifacts identify every capture, transfer, storage, external provider, and deletion path. |
-| WEAR-03 | P0 | Define versioned event and device-session contracts; resolve missing/stale/quality semantics. | Architecture/API lead | WEAR-01, WEAR-02 | Schema review approves units, timestamps, sequence, availability, and failure behavior. |
-| WEAR-04 | P1 | Add simulator and hardware-free contract/fault tests. | QA + API lead | WEAR-03 | CI exercises invalid, stale, duplicate, permission-denied, disconnect, and unsupported-version cases. |
-| WEAR-05 | P1 | Implement one isolated official-SDK adapter and permission lifecycle. | Mobile/OEM lead | WEAR-01 through WEAR-04 | Authorized device test shows opt-in, pause/revoke, disconnect, and clean normalized events. |
-| WEAR-06 | P1 | Implement a user-controlled output adapter for one approved modality. | Accessibility + client lead | WEAR-01, WEAR-02 | Output is interruptible, source-labeled, and tested for accessibility and failure states. |
-| WEAR-07 | P1 | Establish security controls and private deployment runbook for device-connected paths. | Security/platform | WEAR-02, WEAR-03 | Auth, secrets, transport, logs, retention, and replica/state behavior pass review. |
-| WEAR-08 | P2 | Run the private engineering pilot and publish compatibility/limitations report. | QA + product + platform | WEAR-04 through WEAR-07 | Pilot report records device matrix, performance, failures, and explicit go/no-go decision. |
-| WEAR-09 | P2 | Commission separate clinical/regulatory/product assessment if scope moves toward patient use. | Product + qualified advisers | WEAR-08 | Written decision defines permitted claims, evidence needs, and release gates. |
+The priority labels below are wearable-program prerequisites; they are separate from the already implemented software P0/P1 prototype scope above. Status means code/documentation progress only, not approval.
+
+| ID | Priority | Action | Status | Owner role | Depends on | Acceptance evidence |
+|---|---|---|---|---|---|---|
+| WEAR-01 | P0 | Select one user-validated use case and target device/OS; verify official SDK access and terms. | Open | Product + OEM/platform lead | None | Decision record links current official sources and names unsupported assumptions. |
+| WEAR-02 | P0 | Complete data-flow, consent, privacy, threat, and intended-use review. | Partial: prototype data flows documented; formal review open | Privacy/security + product | WEAR-01 | Review artifacts identify every capture, transfer, storage, external provider, and deletion path. |
+| WEAR-03 | P0 | Define versioned event and device-session contracts; resolve missing/stale/quality semantics. | Partial: synthetic session lifecycle only | Architecture/API lead | WEAR-01, WEAR-02 | Schema review approves units, timestamps, sequence, availability, and failure behavior. |
+| WEAR-04 | P1 | Complete simulator and hardware-free contract/fault tests. | Partial: recovery and synthetic session tests exist | QA + API lead | WEAR-03 | CI exercises invalid, stale, duplicate, permission-denied, disconnect, and unsupported-version cases. |
+| WEAR-05 | P1 | Implement one isolated official-SDK adapter and permission lifecycle. | Blocked: no target SDK/device approval | Mobile/OEM lead | WEAR-01 through WEAR-04 | Authorized device test shows opt-in, pause/revoke, disconnect, and clean normalized events. |
+| WEAR-06 | P1 | Implement and evaluate a user-controlled output adapter for one approved modality. | Partial: browser speech only; no glasses output or user study | Accessibility + client lead | WEAR-01, WEAR-02 | Output is interruptible, source-labeled, and tested for accessibility and failure states. |
+| WEAR-07 | P1 | Establish security controls and private deployment runbook for device-connected paths. | Open: production startup is blocked | Security/platform | WEAR-02, WEAR-03 | Auth, secrets, transport, logs, retention, and replica/state behavior pass review. |
+| WEAR-08 | P2 | Run the private engineering pilot and publish compatibility/limitations report. | Not started | QA + product + platform | WEAR-04 through WEAR-07 | Pilot report records device matrix, performance, failures, and explicit go/no-go decision. |
+| WEAR-09 | P2 | Commission separate clinical/regulatory/product assessment if scope moves toward patient use. | Deferred; separate approval gate | Product + qualified advisers | WEAR-08 | Written decision defines permitted claims, evidence needs, and release gates. |
 
 Priorities are sequence guidance, not calendar estimates. Do not start a later phase while a dependency or exit gate is unresolved.
 
 ## Test and validation strategy
+
+The current prototype coverage includes `tests/test_recovery_companion_api.py`, `tests/test_recovery_companion_ui.py`, and `tests/test_application_config.py`. Passing those tests validates only the implemented software contracts; it does not validate an OEM SDK, hardware behavior, clinical use, or a store submission.
 
 - **Unit:** field mapping, units, range validation, timestamp conversion, sequence handling, permission-state mapping, and redaction.
 - **Contract:** vendor adapter output conforms to the versioned shared event; unknown vendor fields are dropped; SDK types and media objects do not cross the boundary.
