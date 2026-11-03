@@ -10,6 +10,13 @@ pages = {
             default=True,
         )
     ],
+    "Recovery Companion": [
+        st.Page(
+            "recovery_companion_page.py",
+            title="Recovery Companion",
+            icon=":material/accessibility_new:",
+        )
+    ],
     "Documentation": [
         st.Page(
             "pages/1_FAQ_and_Capabilities.py",

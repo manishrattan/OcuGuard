@@ -4,6 +4,8 @@
 >
 > This plan is for technical discovery and a controlled software prototype. It is not legal, clinical, privacy, security, or regulatory advice, and it does not authorize patient-facing use.
 
+> **Implementation update (2026-11):** the repository now includes a prototype instruction-card/reminder API and Streamlit page, plus a synthetic device-session lifecycle contract. Users can pause, resume, snooze, acknowledge, and delete schedules; due state is surfaced when the UI/API is used, not delivered as a background notification. It still has no official OEM SDK, device connection, encrypted persistence, or production user authentication. The implementation is for synthetic data only and does not close the product, privacy, security, or clinical gates below.
+
 ## Goal
 
 Create a vendor-neutral path for a future wearable or companion-device integration while keeping manufacturer SDK code isolated, user-controlled, and replaceable. The first deliverable should prove connectivity, permissions, data quality, and failure handling with synthetic or non-sensitive data; it should not make clinical decisions.
@@ -18,10 +20,10 @@ Start with a read-only, user-initiated connection and capability check. If a rea
 
 | Area | Observed repository state | Consequence for wearable work |
 |---|---|---|
-| OEM boundary | `OEMTelemetryAdapter` is a synchronous mapping from one vendor frame to `TelemetryFrame`. | It is a useful normalization seam, but it does not manage permissions, sessions, streaming, cancellation, disconnects, backpressure, or wearable outputs. |
-| Meta example | `MetaGlassesExampleAdapter` maps an OcuGuard-defined synthetic object containing pitch, yaw, and roll. It imports no Meta SDK and accesses no device. | Keep it as a fixture/example. Do not treat its input fields as a real vendor contract. |
+| OEM boundary | `OEMTelemetryAdapter` maps a vendor-shaped frame to `TelemetryFrame`; `DeviceSessionAdapter` defines a separate lifecycle contract. | The session contract is currently backed by an in-process synthetic implementation; it does not manage a real SDK connection, permissions, streaming, or wearable outputs. |
+| Meta example | `MetaGlassesExampleAdapter` maps an OcuGuard-defined synthetic object. The device-session demo does not import a Meta SDK or access a device. | Keep both as fixtures/examples. Do not treat their fields or capabilities as a Meta API contract. |
 | Shared frame | `TelemetryFrame` requires `user_id` and `input_string`; several sensor fields default to `0.0`, and the model has no event timestamp, sequence, unit/source metadata, or explicit freshness state. | A missing measurement could be confused with a real zero. Define a versioned event contract before connecting sensors. |
-| REST ingestion | `POST /v1/stream/evaluate` accepts JSON and immediately routes a frame through existing processing. It is a request/response path, not a wearable session or stream protocol. | Separate device/session ingestion from evaluation, and define authentication, replay/freshness, and authorization before any remote connection. |
+| REST ingestion | `POST /v1/stream/evaluate` remains a request/response evaluation path. Separate recovery routes persist user-entered cards and schedules in local SQLite; device session routes exercise a synthetic lifecycle. | These additions are not a wearable stream protocol. Define production identity, authorization, replay/freshness, and storage before any remote connection. |
 | Processing | The API routes to existing agent modes; some paths can use external model providers when configured. The UI is synthetic and calls the REST API. | Do not connect wearable capture to existing agent routes until each data flow and mode is reviewed; no raw media or health content should be forwarded by default. |
 | Runtime safeguards | The repository documents incomplete production authentication and privacy controls; the API rate limit is process-local. | Keep any integration local/private and single-user for the prototype. Do not expose a device-connected service publicly or use real patient data. |
 

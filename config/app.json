@@ -1,0 +1,46 @@
+{
+  "application": {
+    "name": "OcuGuard",
+    "prototype_notice": "Prototype only. Do not enter real patient information.",
+    "listing_draft": {
+      "name": "OcuGuard",
+      "category_hypothesis": "Accessibility utility; confirm against the target store taxonomy.",
+      "short_description": "A user-controlled prototype for accessing user-entered instructions and schedules. Not medical advice.",
+      "privacy_policy_url": null,
+      "support_url": null
+    }
+  },
+  "features": {
+    "recovery_companion": true,
+    "device_session_demo": true,
+    "browser_speech": true
+  },
+  "recovery": {
+    "database_path": "instance/recovery.sqlite3",
+    "max_cards_per_user": 30,
+    "max_reminders_per_user": 100,
+    "max_user_id_chars": 80,
+    "max_title_chars": 120,
+    "max_instruction_chars": 4000,
+    "max_source_chars": 160,
+    "allowed_recurrence_minutes": [0, 1440, 10080],
+    "allowed_snooze_minutes": [5, 10, 15]
+  },
+  "device": {
+    "adapter": "synthetic",
+    "session_ttl_seconds": 1800,
+    "capabilities": []
+  },
+  "ui": {
+    "api_url": "http://127.0.0.1:5000",
+    "api_timeout_seconds": 8,
+    "timezones": [
+      "UTC",
+      "America/Los_Angeles",
+      "America/Denver",
+      "America/Chicago",
+      "America/New_York",
+      "Europe/London"
+    ]
+  }
+}

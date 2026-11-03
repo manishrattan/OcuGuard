@@ -41,6 +41,10 @@ from agents.be_my_eyes import BeMyEyesAgent
 from agents.aniseikonia_scaling_agent import AniseikoniaScalingAgent
 from agents.metamorphopsia_grid_remapper_agent import MetamorphopsiaGridRemapperAgent
 from agents.biofeedback_anxiety_sentinel_agent import BiofeedbackAnxietySentinelAgent
+from api.recovery import create_recovery_blueprint
+from core.config import load_settings
+from core.recovery import RecoveryStore
+from integrations.oem.device_sessions import SyntheticDeviceSessionAdapter
 
 # Load environment variables
 load_dotenv()
@@ -53,6 +57,17 @@ logging.basicConfig(
 logger = logging.getLogger("OcuGuard.Gateway")
 
 app = Flask(__name__)
+settings = load_settings()
+app.config["OCUGUARD_SETTINGS"] = settings
+app.config["OCUGUARD_API_KEY"] = os.getenv("API_KEY")
+app.config["RECOVERY_STORE"] = RecoveryStore(
+    settings["recovery"]["database_path"]
+)
+app.config["DEVICE_SESSION_ADAPTER"] = SyntheticDeviceSessionAdapter(
+    settings["device"]["capabilities"],
+    settings["device"]["session_ttl_seconds"],
+)
+app.register_blueprint(create_recovery_blueprint())
 
 # Initialize OcuGuard Agents
 supervisor = SupervisorAgent()

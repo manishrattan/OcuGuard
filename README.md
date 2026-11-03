@@ -36,9 +36,9 @@ The ten REST modes in this repository are experiments, not this recovery workflo
 
 ### What the repository does today
 
-The code currently provides a Flask REST API, a FastAPI MCP/SSE server, a browser/Streamlit simulator, and prototype agent modes that process caller-supplied text or numeric values. It has no care-plan management, patient reminders, reviewed encouragement library, live wearable connection, or evidence that its outputs improve recovery.
+The code currently provides a Flask REST API, a FastAPI MCP/SSE server, a browser/Streamlit simulator, prototype agent modes, and an experimental recovery-companion workflow. Users can save instruction cards with their exact supplied wording, schedule and pause reminders, and optionally read card text through their browser's speech engine. These features are not clinical care, and source labels are user-entered rather than verified. Recovery records are stored in a local, unencrypted SQLite database for development; use synthetic text only.
 
-Do not use the current software to decide or remind a person how to position after surgery. It is for synthetic-data development and demonstration only. Any real instructions, sensor feedback, emotional-support feature, or patient-facing use would require separate design, implementation, accessibility and safety testing, and qualified clinical, privacy, security, legal, and regulatory review. No wording or disclaimer can guarantee freedom from liability.
+The device-session page exercises only a synthetic lifecycle contract. It does not discover, pair with, or connect to Meta glasses or other hardware. Do not use the software to decide post-operative positioning or provide care advice. Any use with real patient information, live sensors, or patient-facing care would require separate design, accessibility and safety testing, and qualified clinical, privacy, security, legal, and regulatory review. No wording or disclaimer can guarantee freedom from liability.
 
 ---
 
@@ -50,6 +50,9 @@ The system orchestrates stream data across an extensible, decoupled plugin archi
 flowchart LR
     U["Developer, simulator, or API client<br/>supplies text and telemetry"]
     REST["Flask REST API<br/>app.py"]
+    REC["Recovery API<br/>instruction cards and user schedules"]
+    DB["Local SQLite prototype store<br/>unencrypted"]
+    DEVICE["Synthetic device-session adapter<br/>no hardware"]
     SUP["SupervisorAgent<br/>limited token checks and regex redaction"]
     ROUTER{"agent_mode router"}
     AGENTS["Ten REST modes<br/>orientation, gaze, layout,<br/>environment, and transforms"]
@@ -62,6 +65,8 @@ flowchart LR
     LOCAL["Local rule/math paths<br/>used by selected agents"]
 
     U --> REST --> SUP --> ROUTER --> AGENTS --> RESP
+    REST --> REC --> DB
+    REST --> DEVICE
     MCP --> FRAME --> SUP
     MCP --> TOOLS
     AGENTS --> LLM
@@ -151,7 +156,7 @@ Start OcuGuard Studio in a second terminal:
 python -m streamlit run ui/streamlit_app.py
 ```
 
-Open the local URL printed by Streamlit (normally [http://localhost:8501](http://localhost:8501)). The console sends synthetic frames to the Flask API at `http://127.0.0.1:5000` by default; change the API URL in the controls panel if needed. Pitch, roll, and yaw sliders update the illustrative glasses scene. Dragging the glasses locally shows green/red for the OcuGuard Core demo threshold; it does not change the API values. The dashboard identifies the selected agent and offers a catalog of all ten prototype modes and their input-based strengths. After you submit a frame, the selected agent's response and measured API round-trip time appear. An optional demo tone can play for selected warning-like API labels. This is not a live wearable alert. See the [Streamlit UI guide](ui/README.md) for details.
+Open the local URL printed by Streamlit (normally [http://localhost:8501](http://localhost:8501)). The Studio page sends synthetic frames to the Flask API at `http://127.0.0.1:5000` by default; change the API URL in its controls if needed. The Recovery Companion page adds local prototype instruction cards, user-scheduled reminders, browser speech output, data deletion controls, and a synthetic device-session lifecycle demo. It does not connect to glasses or send audio to the API; browser/OS speech processing can vary, so use synthetic text only. See [application configuration](config/app.json) for UI defaults and configurable limits.
 
 ### Start the APIs
 
@@ -161,7 +166,9 @@ Use Python 3.10 or newer. Install dependencies:
 python -m pip install -r requirements.txt
 ```
 
-Optionally copy `.env.example` to `.env` and configure the required credentials for any external integrations. Never commit secrets.
+Optionally copy `.env.example` to `.env` and configure credentials for any external integrations. Never commit secrets. `API_KEY` protects the new recovery and device endpoints when configured; it is a shared service key, not per-user authentication or authorization. `OCUGUARD_ENVIRONMENT=production` intentionally fails startup until per-user authentication, encrypted persistent storage, transport security, and operational controls are implemented. The current local SQLite store is not suitable for real patient data or public deployment.
+
+The application settings live in [config/app.json](config/app.json). Override the settings file with `OCUGUARD_CONFIG_FILE`, the SQLite path with `OCUGUARD_DATABASE_PATH`, and the UI's API base URL with `OCUGUARD_API_URL`. Keep feature flags, recurrence limits, field-size limits, timezones, and simulator capabilities in configuration rather than editing runtime code.
 
 Start each server in a separate terminal:
 
@@ -190,19 +197,22 @@ See the [unit and integration test strategy](AGENTS.md#testing-strategy) for the
 ## Repository layout
 
 ```text
+config/                 JSON application settings
 agents/                 Agent implementations
-core/                   Shared schemas and plugin interfaces
+core/                   Shared schemas, configuration, and recovery persistence
 docs/                   Specification, contributor guide, architecture
-integrations/oem/        OEM adapter contract and synthetic Meta-shaped example only
+integrations/oem/        OEM contracts and synthetic device-session adapter only
 tests/                  Unit and API tests
-ui/                     Optional Streamlit developer console
+ui/                     Optional Streamlit developer console and recovery page
 app.py                  Flask REST entry point
 mcp_sse_server.py       MCP/SSE entry point
 mcp_agent_server.py     MCP stdio entry point
 serve.py                Static simulator
 ```
 
-Future manufacturer-specific adapters belong under `integrations/oem/`. The vendor-neutral `OEMTelemetryAdapter` contract maps SDK frames into `core.schemas.TelemetryFrame`; it does not implement or imply a Meta or other OEM integration. See the [OEM integration notes](integrations/oem/README.md), [architecture guide](docs/architecture.md), and [wearable integration action plan](docs/wearable-integration-action-plan.md).
+Future manufacturer-specific adapters belong under `integrations/oem/`. The current device-session contract is synthetic; it does not implement or imply a Meta or other OEM integration. A real SDK adapter still needs confirmed official SDK access, supported-device scope, consent, and privacy/security review. See the [OEM integration notes](integrations/oem/README.md), [architecture guide](docs/architecture.md), and [wearable integration action plan](docs/wearable-integration-action-plan.md).
+
+Use the [store and developer-program readiness checklist](docs/store-readiness.md) for a draft listing and release gates. It is not an official Meta checklist or an assertion of eligibility.
 
 ## API overview
 
@@ -216,6 +226,13 @@ Future manufacturer-specific adapters belong under `integrations/oem/`. The vend
 | `POST /v1/stream/evaluate/batch` | Evaluates up to 10 frames. |
 | `GET /v1/system/config` | Configuration endpoint protected by `X-API-Key` when `API_KEY` is configured. |
 | `GET /v1/system/stats` | Aggregate statistics endpoint protected by `X-API-Key` when `API_KEY` is configured. |
+| `GET/POST /v1/recovery/instructions` | List or save user-entered instruction cards. `PUT` and `DELETE /v1/recovery/instructions/<id>` update or remove a card. |
+| `GET/POST /v1/recovery/reminders` | List or schedule reminders. `PATCH /v1/recovery/reminders/<id>` pauses, resumes, snoozes, or acknowledges a reminder; `DELETE` removes it. |
+| `DELETE /v1/recovery/data` | Deletes a user's prototype cards and reminders; request must include `"confirm": true`. |
+| `GET /v1/device/capabilities` | Returns configured synthetic adapter capabilities; all physical hardware capabilities are false. |
+| `POST /v1/device/sessions` | Starts a synthetic session only. `POST /v1/device/sessions/<id>/actions` pauses, resumes, or stops it. |
+
+Recovery and device endpoints accept `X-API-Key` when `API_KEY` is set. In local development with no key configured, these routes are unauthenticated; do not expose them outside a trusted local environment. A shared key is not a substitute for end-user identity, consent management, or per-user authorization.
 
 `POST /v1/stream/evaluate` requires `user_id` and `input_string`; `agent_mode` defaults to `EYE_SENTINEL`. The ten implemented modes are `EYE_SENTINEL`, `OCUGUARD_CORE`, `GAZE_COMPASS`, `TABULAR_LAYOUT_SPEECH`, `ERGONOMIC_SCHEDULE`, `AMBIENT_LUMINANCE`, `BE_MY_EYES`, `ANISEIKONIA_SCALING`, `METAMORPHOPSIA_GRID_REMAPPER`, and `BIOFEEDBACK_ANXIETY_SENTINEL`.
 

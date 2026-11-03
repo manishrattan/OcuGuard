@@ -11,3 +11,4 @@ pytest_log.txt
 .venv/
 venv/
 env/
+instance/
